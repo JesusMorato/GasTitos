@@ -2,10 +2,10 @@
 
 Marca cada punto cuando lo termines.
 
-## 1. Ejecutar la migración inicial en Supabase
+## 1. Ejecutar la migración inicial en Supabase ✅ (hecho el 2026-09-15)
 
-- [ ] Supabase → proyecto GasTitos → **SQL Editor** (menú lateral).
-- [ ] Pega el contenido completo de `supabase/migrations/0001_init.sql` y pulsa **Run**.
+- [x] Supabase → proyecto GasTitos → **SQL Editor** (menú lateral).
+- [x] Pega el contenido completo de `supabase/migrations/0001_init.sql` y pulsa **Run**.
       Debe decir *Success*. Si da error, copia el mensaje tal cual y pégaselo a Claude.
 
 ## 2. Secret de la base de datos (para las migraciones automáticas)
