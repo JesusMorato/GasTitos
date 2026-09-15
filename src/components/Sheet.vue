@@ -1,6 +1,13 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
+import { lockScroll, unlockScroll } from '../lib/scrollLock'
+
 defineProps<{ title: string }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
+
+// Mientras la hoja está abierta, la página de detrás no se mueve.
+onMounted(lockScroll)
+onBeforeUnmount(unlockScroll)
 </script>
 
 <template>

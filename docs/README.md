@@ -15,11 +15,16 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
-**2026-09-15 · menú de tres puntos en los gastos.**
+**2026-09-15 · menú de tres puntos en los gastos + scroll en móvil.**
 Las listas de gastos ya no muestran los botones de emoji (✏️ 🗑️ 🔒). En su lugar hay
-un botón de tres puntos (dibujado en SVG) que abre una hoja con las mismas opciones escritas: editar,
-hacer público/privado (solo en la vista Yo) y borrar. El emoji de la categoría sigue
-a la izquierda de cada gasto.
+un botón de tres puntos (dibujado en SVG) que despliega un menú pequeño justo debajo
+(o encima, si no cabe) con las mismas opciones escritas: editar, hacer público/privado
+(solo en la vista Yo) y borrar. Se cierra al tocar fuera o con Escape. El emoji de la
+categoría sigue a la izquierda de cada gasto.
+Además, mientras una hoja modal está abierta la página de detrás queda fija
+(`src/lib/scrollLock.ts`, con test): en iOS el scroll "se escapaba" y la página se
+quedaba a medias. El hueco inferior del contenido cuenta ahora la zona segura del iPhone,
+para que el último elemento no quede bajo la barra de navegación.
 
 **2026-09-15 · v0.2 — fase 1: reparto real + rediseño.**
 
