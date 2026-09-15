@@ -122,7 +122,7 @@ function deleteContribution(c: Contribution) {
         <h2>Mis gastos</h2>
         <button type="button" class="small secondary" @click="editor.openNew('personal')">+ Añadir</button>
       </div>
-      <p class="tiny" style="margin-bottom: 0.5rem">🔒 Privados por defecto. El candado los hace visibles para tu pareja, solo lectura.</p>
+      <p class="tiny" style="margin-bottom: 0.5rem">🔒 Privados por defecto. Con los tres puntos de cada gasto puedes hacerlo visible para tu pareja, solo lectura.</p>
       <ExpenseList
         :expenses="myExpenses"
         :category-by-id="data.categoryById.value"

@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { Category, Expense } from '../types'
 import { describeSplit, formatDate, formatEur, type Share } from '../lib/money'
+import Sheet from './Sheet.vue'
 
 type Row = Expense & { shares: Share[] }
 
-defineProps<{
+const props = defineProps<{
   expenses: Row[]
   categoryById: Record<string, Category>
   nameOf: (id: string) => string
@@ -20,6 +22,28 @@ const emit = defineEmits<{
   (e: 'delete', x: Row): void
   (e: 'toggle-public', x: Row): void
 }>()
+
+// Gasto cuyo menú de tres puntos está abierto (undefined = ninguno).
+const menuFor = ref<Row | undefined>(undefined)
+
+function titleOf(x: Row) {
+  return x.description || props.categoryById[x.category_id]?.name || 'Gasto'
+}
+
+function edit(x: Row) {
+  menuFor.value = undefined
+  emit('edit', x)
+}
+
+function remove(x: Row) {
+  menuFor.value = undefined
+  emit('delete', x)
+}
+
+function togglePublic(x: Row) {
+  menuFor.value = undefined
+  emit('toggle-public', x)
+}
 </script>
 
 <template>
@@ -50,12 +74,25 @@ const emit = defineEmits<{
       </div>
       <span class="amount">{{ formatEur(x.amount) }}</span>
       <div v-if="editable" class="actions">
-        <button v-if="privacyToggle" type="button" class="icon" :title="x.is_public ? 'Hacer privado' : 'Hacer público'" @click="emit('toggle-public', x)">
-          {{ x.is_public ? '🔓' : '🔒' }}
+        <button type="button" class="icon dots" title="Opciones" aria-label="Opciones" @click="menuFor = x">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
         </button>
-        <button type="button" class="icon" title="Editar" @click="emit('edit', x)">✏️</button>
-        <button type="button" class="icon" title="Borrar" @click="emit('delete', x)">🗑️</button>
       </div>
     </li>
   </ul>
+
+  <Sheet v-if="menuFor" :title="titleOf(menuFor)" @close="menuFor = undefined">
+    <div class="quick">
+      <button type="button" @click="edit(menuFor)">
+        <span>Editar gasto<small>Cambiar importe, fecha o categoría</small></span>
+      </button>
+      <button v-if="privacyToggle" type="button" @click="togglePublic(menuFor)">
+        <span v-if="menuFor.is_public">Hacer privado<small>Tu pareja dejará de verlo</small></span>
+        <span v-else>Hacer público<small>Tu pareja podrá verlo, solo lectura</small></span>
+      </button>
+      <button type="button" class="destructive" @click="remove(menuFor)">
+        <span>Borrar gasto<small>No se puede deshacer</small></span>
+      </button>
+    </div>
+  </Sheet>
 </template>

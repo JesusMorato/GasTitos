@@ -8,11 +8,18 @@ Una app web para que una pareja apunte gastos y se ponga objetivos de ahorro.
   (a medias), objetivos comunes con aportaciones, y una sección con lo que la otra
   persona ha decidido hacer público.
 - **Vista Yo:** gastos y objetivos personales. Privados por defecto. Cada elemento
-  tiene un candado para hacerlo público: la pareja lo ve pero no lo edita.
+  se puede hacer público (en los gastos, desde el menú de los tres puntos): la pareja lo ve pero no lo
+  edita.
 
 Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
+
+**2026-09-15 · menú de tres puntos en los gastos.**
+Las listas de gastos ya no muestran los botones de emoji (✏️ 🗑️ 🔒). En su lugar hay
+un botón de tres puntos (dibujado en SVG) que abre una hoja con las mismas opciones escritas: editar,
+hacer público/privado (solo en la vista Yo) y borrar. El emoji de la categoría sigue
+a la izquierda de cada gasto.
 
 **2026-09-15 · v0.2 — fase 1: reparto real + rediseño.**
 
