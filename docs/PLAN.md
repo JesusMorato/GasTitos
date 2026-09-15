@@ -308,3 +308,40 @@ Con las respuestas a 1 y 2 puedo empezar la fase 1 en la siguiente sesión.
 - Ahorro: [YNAB goal tracking](https://www.ynab.com/features/goal-tracking), [YNAB smarter goals](https://www.ynab.com/blog/budget-smarter-with-smarter-goals), [Revolut Pockets](https://www.revolut.com/blog/post/meet-pockets-the-next-evolution-of-vaults/), [N26 vs Revolut](https://www.twobirdsbreakingfree.com/n26-vs-revolut-comparison-guide), [Plum vs Chip 2026](https://firststepsavings.com/chip-vs-plum-uk/), [apps de auto-ahorro](https://due.com/automatic-saving-apps/)
 - España: [apps para ahorrar 2026](https://www.publico.es/ahorro-inteligente/mejores-apps-empezar-ahorrar-2026.html), [alternativas a Fintonic](https://banktrack.com/blog/alternativas-fintonic)
 - Paneles y gráficas: [7 gráficas esenciales](https://www.syncfusion.com/blogs/post/financial-charts-visualization), [dashboard que tiene sentido](https://www.wealthnx.ai/blog/how-to-build-a-personal-finance-dashboard-that-actually-makes-sense/), [qué hace un panel por ti](https://www.fintrackai.app/blog/personal-finance-dashboard)
+
+---
+
+## 8. Especificaciones añadidas después del plan
+
+### 8.1 Límite de gasto mensual con gráfico de acumulado (pedido el 2026-09-15)
+
+**Qué es.** Un límite de gasto al mes (personal en Yo; opcionalmente otro para el bote
+en Pareja) y un gráfico que enseña cómo te acercas a él a lo largo del mes.
+
+**Cómo se ve.**
+- Eje X: los días del mes (1 → 30/31). Eje Y: euros.
+- **Línea discontinua roja horizontal** a la altura del límite.
+- **Curva de gasto acumulado**: cada día suma lo gastado hasta entonces, así que solo
+  sube. Área suave bajo la curva en el color del espacio (verde en Yo, ciruela en Pareja).
+- Hasta el día de hoy la curva es sólida; los días que quedan del mes se dejan vacíos
+  (opcional: una proyección punteada a tu ritmo medio, para ver si llegarás).
+- Cuando la curva **cruza el límite**, el tramo que sobresale se pinta en rojo y el
+  área por encima del límite se sombrea en rojo claro.
+- Encima del gráfico: "Llevas 640 € de 900 €" con una barra, y el estado en texto:
+  *vas bien* (por debajo del ritmo del mes), *ojo* (a partir del 80 %), *pasado* (con
+  la cifra de exceso).
+- Al tocar un punto de la curva se ve el día y el acumulado.
+
+**Datos.**
+- Tabla `budgets(household_id, user_id null para el bote, scope 'personal'|'pot',
+  monthly_limit numeric, created_at)`. Un límite personal por usuario (privado) y uno
+  opcional para el bote (del hogar).
+- Se configura desde Ajustes ("Mi límite mensual") y desde la propia tarjeta.
+- El acumulado personal usa el mismo agregado que "Mi mes": gastos personales + mi
+  parte de los repartidos.
+
+**Dónde.** Yo → tarjeta "Mi mes" (debajo de la cifra grande). Pareja → Bote, con el
+límite del bote.
+
+**Encaja en:** fase 3 (entra Chart.js) + la parte de presupuesto de la fase 7, que se
+adelanta. Se hace como "fase 3b" justo después del donut y las barras de 6 meses.
