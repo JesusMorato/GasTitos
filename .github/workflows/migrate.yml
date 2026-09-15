@@ -32,6 +32,15 @@ jobs:
             echo "present=false" >> "$GITHUB_OUTPUT"
           else
             echo "present=true" >> "$GITHUB_OUTPUT"
+            # Oculta también la contraseña por separado: si psql falla y la repite en
+            # el mensaje de error, GitHub la sustituirá por *** en el registro.
+            pw=$(printf '%s' "$SUPABASE_DB_URL" | sed -n 's|^[^:]*://[^:]*:\(.*\)@[^@]*$|\1|p')
+            if [ -n "$pw" ]; then echo "::add-mask::$pw"; fi
+            case "$pw" in
+              *[!A-Za-z0-9]*)
+                echo "::error title=Contraseña con símbolos::La contraseña dentro de SUPABASE_DB_URL contiene símbolos. Usa solo letras y números (cámbiala en Supabase → Project Settings → Database → Reset database password) y actualiza el secret."
+                exit 1 ;;
+            esac
           fi
 
       - name: Aplicar migraciones pendientes
