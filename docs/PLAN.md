@@ -345,3 +345,19 @@ límite del bote.
 
 **Encaja en:** fase 3 (entra Chart.js) + la parte de presupuesto de la fase 7, que se
 adelanta. Se hace como "fase 3b" justo después del donut y las barras de 6 meses.
+
+**Añadido tras revisar Copilot, Toshl y Monzo (2026-09-15):**
+
+1. **Línea de ritmo**: diagonal gris punteada de 0 € el día 1 al límite el último día del
+   mes. Junto a la línea roja del límite permite ver de un vistazo cuánto llevas, si vas
+   más rápido de lo debido y si te has pasado. (Patrón "spending line" de Copilot.)
+2. **Cifra principal bajo el gráfico**: "Te quedan X € para Y días · Z €/día". Es el dato
+   accionable que Toshl y Monzo ponen en primer plano.
+3. **Estado en texto según el ritmo, no un % fijo**: *por debajo del ritmo* (verde),
+   *por encima del ritmo* (ámbar), *límite superado* (rojo, con la cifra de exceso).
+   Sustituye al aviso del 80 %.
+4. Descartado: barras diarias bajo la curva (Toshl). Sobrecarga en móvil.
+
+Referencias: [Copilot](https://moneywithkatie.com/copilot-review-a-budgeting-app-that-finally-gets-it-right/),
+[Toshl budgets](https://toshl.com/blog/how-to-use-the-budgets-web-app/),
+[Monzo Targets](https://monzo.com/blog/targets-in-trends).
