@@ -8,17 +8,17 @@ Marca cada punto cuando lo termines.
 - [x] Pega el contenido completo de `supabase/migrations/0001_init.sql` y pulsa **Run**.
       Debe decir *Success*. Si da error, copia el mensaje tal cual y pégaselo a Claude.
 
-## 2. Secret de la base de datos (para las migraciones automáticas)
+## 2. Secret de la base de datos ✅ (hecho el 2026-09-15, workflow en verde)
 
-- [ ] Supabase → botón **Connect** (arriba) → pestaña **Session pooler**
+- [x] Supabase → botón **Connect** (arriba) → pestaña **Session pooler**
       (NO "Direct connection": esa va solo por IPv6 y GitHub no la alcanza).
-- [ ] Copia la cadena. Se parece a
+- [x] Copia la cadena. Se parece a
       `postgresql://postgres.jenklrikrwhdxzqjefgu:[YOUR-PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`
-- [ ] Sustituye `[YOUR-PASSWORD]` (con corchetes incluidos) por la contraseña de la
+- [x] Sustituye `[YOUR-PASSWORD]` (con corchetes incluidos) por la contraseña de la
       base de datos que apuntaste al crear el proyecto.
-- [ ] GitHub → repo GasTitos → **Settings → Secrets and variables → Actions →
+- [x] GitHub → repo GasTitos → **Settings → Secrets and variables → Actions →
       New repository secret**. Name: `SUPABASE_DB_URL`. Secret: la cadena entera.
-- [ ] Opcional: GitHub → **Actions → Migraciones Supabase → Run workflow** para
+- [x] Opcional: GitHub → **Actions → Migraciones Supabase → Run workflow** para
       comprobar que sale en verde (dirá "0001_init.sql ya aplicada").
 
 ## 3. Activar GitHub Pages ✅ (hecho el 2026-09-15 desde Claude Code)
