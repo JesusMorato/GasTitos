@@ -62,6 +62,7 @@ pareja, solo lectura).
 
 - `docs/README.md` — estado del proyecto y decisiones tomadas.
 - `docs/MODELO-DATOS.md` — tablas y reglas de visibilidad.
+- `docs/PLAN.md` — plan de producto v2: estado del arte, modelo, fases y decisiones.
 - `docs/CONFIGURACION-MANUAL.md` — pasos que solo puede hacer el dueño (secrets,
   Pages, usuarios, Google).
 

@@ -42,6 +42,8 @@ se creó el 2026-09-15.
 
 ## Pendiente / ideas
 
+El plan completo por fases está en `PLAN.md`. Lo de abajo son ideas sueltas anteriores.
+
 - Reparto distinto de 50/50.
 - Gastos recurrentes (alquiler, suscripciones).
 - Exportar a CSV.
