@@ -21,12 +21,12 @@ Marca cada punto cuando lo termines.
 - [ ] Opcional: GitHub → **Actions → Migraciones Supabase → Run workflow** para
       comprobar que sale en verde (dirá "0001_init.sql ya aplicada").
 
-## 3. Activar GitHub Pages
+## 3. Activar GitHub Pages ✅ (hecho el 2026-09-15 desde Claude Code)
 
-- [ ] Espera a que en **Actions** el workflow "Deploy a GitHub Pages" esté en verde.
-- [ ] GitHub → repo → **Settings → Pages**. Source: *Deploy from a branch*.
+- [x] Espera a que en **Actions** el workflow "Deploy a GitHub Pages" esté en verde.
+- [x] GitHub → repo → **Settings → Pages**. Source: *Deploy from a branch*.
       Branch: `gh-pages`, carpeta `/ (root)`. Save.
-- [ ] En 1-2 minutos: https://jesusmorato.github.io/GasTitos/
+- [x] En 1-2 minutos: https://jesusmorato.github.io/GasTitos/
 
 ## 4. Crear las dos cuentas y cerrar el registro
 
