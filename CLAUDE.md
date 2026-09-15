@@ -9,7 +9,8 @@ El dueño del proyecto es principiante: explica los cambios en lenguaje sencillo
 jerga innecesaria. Una cosa cada vez.
 
 Cuando pida un cambio, desarróllalo directamente: nada de mockups, capturas ni vistas
-previas salvo que las pida expresamente.
+previas salvo que las pida expresamente. Al terminar, fusiona en `main` y haz push (eso
+publica la web) salvo que diga lo contrario.
 
 ## Stack
 
