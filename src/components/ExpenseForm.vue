@@ -4,6 +4,7 @@ import type { Category, Expense, Member, SplitMode } from '../types'
 import { computeShares, formatEur, round2, sharesAreValid, todayIso, type Share } from '../lib/money'
 import type { ExpenseInput } from '../composables/useData'
 import Sheet from './Sheet.vue'
+import CategoryIcon from './CategoryIcon.vue'
 import SegmentedControl from './SegmentedControl.vue'
 
 type Kind = 'personal' | 'shared' | 'pot'
@@ -164,7 +165,7 @@ function submit() {
             class="chip"
             :class="{ active: c.id === categoryId }"
             @click="categoryId = c.id"
-          ><span>{{ c.emoji }}</span>{{ c.name }}</button>
+          ><CategoryIcon variant="inline" :icon="c.icon" :emoji="c.emoji" :color="c.color" />{{ c.name }}</button>
         </div>
       </div>
 

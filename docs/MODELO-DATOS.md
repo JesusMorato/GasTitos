@@ -75,9 +75,15 @@ miembros.
 ## Añadido en 0002 (fase 1: reparto real)
 
 ### categories — categorías del hogar
-`name`, `emoji`, `color`, `sort_order`. Únicas por hogar y nombre. Se siembran 10 por
+`name`, `emoji`, `color`, `icon`, `sort_order`. Únicas por hogar y nombre. Se siembran 10 por
 defecto al crear el hogar. Los dos miembros pueden editarlas. No se puede borrar una
 categoría con gastos (FK restrict).
+
+`icon` (añadido en 0004) es la clave de un icono del juego propio de GasTitos
+(`casa`, `comida`, `transporte`, `ocio`, `salud`, `ropa`, `regalos`, `viajes`,
+`suscripciones`, `otros`; ver `src/lib/icons.ts`). Si es `null`, la app dibuja el
+`emoji`. Las 10 categorías de serie llevan icono y el color de la paleta que le
+corresponde a cada uno.
 
 ### household_members.share_pct
 Porcentaje de reparto por defecto de cada miembro (50 por defecto). Se cambia con la

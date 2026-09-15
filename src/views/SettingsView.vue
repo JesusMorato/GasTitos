@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData } from '../composables/useData'
 import type { Category } from '../types'
+import CategoryIcon from '../components/CategoryIcon.vue'
 import Sheet from '../components/Sheet.vue'
 import EmojiPicker from '../components/EmojiPicker.vue'
 
@@ -44,16 +45,18 @@ const catEditing = ref<Category | undefined>()
 const catName = ref('')
 const catEmoji = ref('📦')
 const catColor = ref('#7a857f')
+const catIcon = ref<string | null>(null)
 
 function openCat(c?: Category) {
   catEditing.value = c
   catName.value = c?.name ?? ''
   catEmoji.value = c?.emoji ?? '📦'
   catColor.value = c?.color ?? '#7a857f'
+  catIcon.value = c?.icon ?? null
   catOpen.value = true
 }
 function saveCat() {
-  const input = { name: catName.value.trim(), emoji: catEmoji.value || '📦', color: catColor.value }
+  const input = { name: catName.value.trim(), emoji: catEmoji.value || '📦', color: catColor.value, icon: catIcon.value }
   if (!input.name) return
   const editing = catEditing.value
   catOpen.value = false
@@ -134,10 +137,10 @@ async function logout() {
         <h2>Categorías</h2>
         <button type="button" class="small secondary" @click="openCat()">+ Nueva</button>
       </div>
-      <p class="tiny" style="margin-bottom: 0.4rem">Son comunes al hogar. Elige el emoji y el color que quieras para cada una.</p>
+      <p class="tiny" style="margin-bottom: 0.4rem">Son comunes al hogar. Elige para cada una un icono GasTitos o un emoji, y su color.</p>
       <ul class="list">
         <li v-for="(c, i) in data.categories.value" :key="c.id">
-          <span class="emoji-badge" :style="{ '--badge': c.color }">{{ c.emoji }}</span>
+          <CategoryIcon :icon="c.icon" :emoji="c.emoji" :color="c.color" />
           <div class="grow ellipsis"><strong>{{ c.name }}</strong></div>
           <div class="actions">
             <button type="button" class="icon" title="Subir" :disabled="i === 0" @click="moveCat(c, -1)">↑</button>
@@ -159,7 +162,7 @@ async function logout() {
           <label for="cname">Nombre</label>
           <input id="cname" v-model="catName" required maxlength="30" placeholder="Mascotas" />
         </div>
-        <EmojiPicker v-model:emoji="catEmoji" v-model:color="catColor" />
+        <EmojiPicker v-model:emoji="catEmoji" v-model:color="catColor" v-model:icon="catIcon" icons />
         <div class="row" style="justify-content: flex-end">
           <button type="button" class="ghost" @click="catOpen = false">Cancelar</button>
           <button type="submit">Guardar</button>

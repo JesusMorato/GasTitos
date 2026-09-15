@@ -121,7 +121,7 @@ export function useData() {
   }
 
   // ---- categorías --------------------------------------------
-  async function addCategory(householdId: string, input: Pick<Category, 'name' | 'emoji' | 'color'>) {
+  async function addCategory(householdId: string, input: Pick<Category, 'name' | 'emoji' | 'color' | 'icon'>) {
     const sort = (categories.value.at(-1)?.sort_order ?? 0) + 10
     const { error: e } = await supabase
       .from('categories')
@@ -130,7 +130,7 @@ export function useData() {
     await loadAll()
   }
 
-  async function updateCategory(id: string, patch: Partial<Pick<Category, 'name' | 'emoji' | 'color' | 'sort_order'>>) {
+  async function updateCategory(id: string, patch: Partial<Pick<Category, 'name' | 'emoji' | 'color' | 'icon' | 'sort_order'>>) {
     const { error: e } = await supabase.from('categories').update(patch).eq('id', id)
     fail(e)
     await loadAll()
