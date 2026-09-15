@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Category, Expense } from '../types'
 import { describeSplit, formatDate, formatEur, type Share } from '../lib/money'
+import CategoryIcon from './CategoryIcon.vue'
 
 type Row = Expense & { shares: Share[] }
 
@@ -84,9 +85,11 @@ onBeforeUnmount(() => {
   <div v-if="expenses.length === 0" class="empty">{{ emptyText ?? 'Nada por aquí todavía.' }}</div>
   <ul v-else class="list">
     <li v-for="x in expenses" :key="x.id">
-      <span class="emoji-badge" :style="{ '--badge': categoryById[x.category_id]?.color ?? '#7a857f' }">
-        {{ categoryById[x.category_id]?.emoji ?? '📦' }}
-      </span>
+      <CategoryIcon
+        :icon="categoryById[x.category_id]?.icon"
+        :emoji="categoryById[x.category_id]?.emoji"
+        :color="categoryById[x.category_id]?.color"
+      />
       <div class="grow">
         <div class="ellipsis">
           <strong>{{ x.description || categoryById[x.category_id]?.name || 'Gasto' }}</strong>

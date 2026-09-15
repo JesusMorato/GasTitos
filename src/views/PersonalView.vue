@@ -7,6 +7,8 @@ import { formatEur, monthOf, myShareTotal, round2, sum, todayIso, totalsBy } fro
 import type { Contribution, SavingsGoal } from '../types'
 import MonthPicker from '../components/MonthPicker.vue'
 import ExpenseList from '../components/ExpenseList.vue'
+import CategoryIcon from '../components/CategoryIcon.vue'
+import EmptyState from '../components/EmptyState.vue'
 import GoalForm from '../components/GoalForm.vue'
 import GoalCard from '../components/GoalCard.vue'
 
@@ -103,16 +105,13 @@ function deleteContribution(c: Contribution) {
       <div v-if="byCategory.length" class="bars">
         <div v-for="c in byCategory" :key="c.key" class="bar-row" :style="{ '--bar': data.categoryById.value[c.key]?.color }">
           <div>
-            <span>{{ data.categoryById.value[c.key]?.emoji }} {{ data.categoryById.value[c.key]?.name }}</span>
+            <span><CategoryIcon variant="inline" :icon="data.categoryById.value[c.key]?.icon" :emoji="data.categoryById.value[c.key]?.emoji" :color="data.categoryById.value[c.key]?.color" />{{ data.categoryById.value[c.key]?.name }}</span>
             <div class="progress"><div :style="{ width: (totalMonth ? (c.total / totalMonth) * 100 : 0) + '%' }" /></div>
           </div>
           <span class="amount tnum" style="font-weight: 600">{{ formatEur(c.total) }}</span>
         </div>
       </div>
-      <div v-else class="empty">
-        <span class="big-emoji">🌱</span>
-        Sin gastos este mes. Pulsa ➕ para apuntar el primero.
-      </div>
+      <EmptyState v-else kind="gastos">Sin gastos este mes. Pulsa ➕ para apuntar el primero.</EmptyState>
     </div>
 
     <p v-if="data.error.value || actionError" class="error">{{ actionError ?? data.error.value }}</p>
@@ -140,10 +139,7 @@ function deleteContribution(c: Contribution) {
       <h2>Mis huchas <span class="tag" style="margin-left: 0.3rem">{{ formatEur(totalSaved) }}</span></h2>
       <button type="button" class="small secondary" @click="editingGoal = undefined; showGoalForm = true">+ Hucha</button>
     </div>
-    <div v-if="myGoals.length === 0" class="card empty">
-      <span class="big-emoji">🐷</span>
-      Sin huchas todavía. Crea una para lo que quieras conseguir.
-    </div>
+    <EmptyState v-if="myGoals.length === 0" kind="huchas" class="card">Sin huchas todavía. Crea una para lo que quieras conseguir.</EmptyState>
     <GoalCard
       v-for="g in myGoals"
       :key="g.id"

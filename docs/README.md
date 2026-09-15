@@ -15,6 +15,17 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-15 · iconos y paleta del lienzo de diseño.**
+Las categorías ya no se muestran con emoji sino con el juego de 10 iconos "estilo
+GasTitos" del lienzo *Logo GasTitos* (trazo de 2 px), cada uno con su color de la
+paleta: Casa azul, Comida teja, Transporte verde azulado, Ocio malva, Salud verde,
+Ropa mostaza, Regalos rosa, Viajes azul, Suscripciones lila, Otros gris. Migración
+`0004_iconos_categorias.sql`: columna `icon` en `categories`, las categorías de serie
+reciben su icono y color. En Ajustes → Categorías se puede elegir un icono GasTitos
+(aplica su color) o seguir con un emoji. Las pantallas vacías (sin gastos, sin
+huchas, invita a tu pareja) usan las tres ilustraciones del lienzo en vez de emojis
+grandes (`components/EmptyState.vue`). Las huchas siguen con emoji.
+
 **2026-09-15 · menú de tres puntos en los gastos + scroll en móvil.**
 Las listas de gastos ya no muestran los botones de emoji (✏️ 🗑️ 🔒). En su lugar hay
 un botón de tres puntos (dibujado en SVG) que despliega un menú pequeño justo debajo

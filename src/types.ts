@@ -19,6 +19,8 @@ export interface Category {
   name: string
   emoji: string
   color: string
+  /** Clave del icono del juego propio (ver lib/icons.ts). null = se usa el emoji. */
+  icon: string | null
   sort_order: number
 }
 

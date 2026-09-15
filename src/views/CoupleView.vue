@@ -10,6 +10,8 @@ import SegmentedControl from '../components/SegmentedControl.vue'
 import MonthPicker from '../components/MonthPicker.vue'
 import BalanceCard from '../components/BalanceCard.vue'
 import ExpenseList from '../components/ExpenseList.vue'
+import CategoryIcon from '../components/CategoryIcon.vue'
+import EmptyState from '../components/EmptyState.vue'
 import SettleForm from '../components/SettleForm.vue'
 import GoalForm from '../components/GoalForm.vue'
 import GoalCard from '../components/GoalCard.vue'
@@ -105,6 +107,7 @@ function deleteContribution(c: Contribution) {
 <template>
   <div class="space-pareja stack">
     <div v-if="!partner" class="card">
+      <EmptyState kind="pareja" />
       <h2>Invita a tu pareja</h2>
       <p class="muted">Todavía estás solo en <strong>{{ state.household?.name }}</strong>. Pásale este código para que se una:</p>
       <div class="code-invite">{{ state.household?.invite_code }}</div>
@@ -182,7 +185,7 @@ function deleteContribution(c: Contribution) {
         <div v-if="potByCategory.length" class="bars">
           <div v-for="c in potByCategory" :key="c.key" class="bar-row" :style="{ '--bar': data.categoryById.value[c.key]?.color }">
             <div>
-              <span>{{ data.categoryById.value[c.key]?.emoji }} {{ data.categoryById.value[c.key]?.name }}</span>
+              <span><CategoryIcon variant="inline" :icon="data.categoryById.value[c.key]?.icon" :emoji="data.categoryById.value[c.key]?.emoji" :color="data.categoryById.value[c.key]?.color" />{{ data.categoryById.value[c.key]?.name }}</span>
               <div class="progress"><div :style="{ width: (potTotal ? (c.total / potTotal) * 100 : 0) + '%' }" /></div>
             </div>
             <span class="amount tnum" style="font-weight: 600">{{ formatEur(c.total) }}</span>
@@ -214,10 +217,7 @@ function deleteContribution(c: Contribution) {
         <h2>Huchas en pareja</h2>
         <button type="button" class="small secondary" @click="editingGoal = undefined; showGoalForm = true">+ Hucha</button>
       </div>
-      <div v-if="sharedGoals.length === 0" class="card empty">
-        <span class="big-emoji">🏖️</span>
-        Aún no tenéis huchas comunes. ¿Un viaje? ¿Un colchón de emergencia?
-      </div>
+      <EmptyState v-if="sharedGoals.length === 0" kind="huchas" class="card">Aún no tenéis huchas comunes. ¿Un viaje? ¿Un colchón de emergencia?</EmptyState>
       <GoalCard
         v-for="g in sharedGoals"
         :key="g.id"
