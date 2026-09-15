@@ -1,0 +1,69 @@
+# GasTitos · guía para Claude Code
+
+App web de gastos y ahorro para una pareja (exactamente dos usuarios). Vista "Pareja"
+(gastos compartidos, balance 50/50, objetivos comunes, lo que la otra persona hace
+público) y vista "Yo" (gastos y objetivos personales, privados por defecto, con botón
+público/privado por elemento).
+
+El dueño del proyecto es principiante: explica los cambios en lenguaje sencillo y sin
+jerga innecesaria. Una cosa cada vez.
+
+## Stack
+
+- Frontend: Vue 3 + TypeScript + Vite. Router en modo hash. Sin Pinia (estado en
+  composables `src/composables/`).
+- Backend: Supabase (Postgres + Auth). Cliente en `src/supabase.ts`.
+- Tests: Vitest (`npm test`). Los tests viven junto al código (`*.spec.ts`).
+- Publicación: GitHub Pages desde la rama `gh-pages`, base `/GasTitos/`.
+- Automatismos: `.github/workflows/` (deploy, migraciones, keepalive).
+
+## Comandos
+
+```
+npm install        # primera vez
+npm run dev        # servidor local
+npm test           # tests
+npm run build      # typecheck + build (lo mismo que hace el deploy)
+```
+
+En el portátil del trabajo (proxy corporativo) npm falla con `SELF_SIGNED_CERT_IN_CHAIN`.
+Ejecuta los comandos con `NODE_USE_SYSTEM_CA=1` delante (o `$env:NODE_USE_SYSTEM_CA=1`
+en PowerShell) para que Node confíe en los certificados de Windows. En GitHub Actions
+no hace falta.
+
+Antes de hacer push ejecuta `npm test` y `npm run build`: si falla aquí, fallará en
+GitHub Actions.
+
+## Convenciones
+
+- Idioma de la interfaz, comentarios y commits: español.
+- Nunca subir secretos. `.env` solo contiene la URL y la clave *pública* de Supabase.
+  La contraseña de la base de datos vive únicamente en el secret `SUPABASE_DB_URL`
+  de GitHub.
+- Cambios de base de datos = nuevo archivo `supabase/migrations/NNNN_descripcion.sql`
+  (numeración consecutiva, nunca editar uno ya aplicado). Deben ser idempotentes
+  (`if not exists`, `drop policy if exists` …) y terminar con el `insert` en
+  `schema_migrations` con su propio nombre.
+- Toda tabla nueva lleva RLS activado y políticas explícitas. La privacidad se
+  garantiza en la base de datos, no solo en la interfaz.
+- Importes: `numeric(12,2)` en Postgres; en el cliente se convierten a número en
+  `useData.ts`. Cálculos de dinero en `src/lib/money.ts` (puro, testeado).
+- Los componentes reciben datos por props y emiten eventos; las llamadas a Supabase
+  se concentran en `src/composables/useData.ts` y `useSession.ts`.
+
+## Modelo de datos (resumen)
+
+Ver `docs/MODELO-DATOS.md`. Claves: `households` (1 pareja), `household_members`
+(máx. 2, uno por usuario), `expenses`, `savings_goals`, `goal_contributions`.
+Flags: `is_shared` (de la pareja) e `is_public` (individual pero visible para la
+pareja, solo lectura).
+
+## Documentación
+
+- `docs/README.md` — estado del proyecto y decisiones tomadas.
+- `docs/MODELO-DATOS.md` — tablas y reglas de visibilidad.
+- `docs/CONFIGURACION-MANUAL.md` — pasos que solo puede hacer el dueño (secrets,
+  Pages, usuarios, Google).
+
+Al terminar una sesión con cambios relevantes, actualiza `docs/README.md`
+(sección "Estado" y "Pendiente").

@@ -1,0 +1,41 @@
+# Aplica a Supabase los archivos SQL nuevos de supabase/migrations/.
+# Necesita el secret SUPABASE_DB_URL (cadena de conexión "Session pooler").
+# Si el secret no existe todavía, avisa y termina en verde en vez de fallar.
+name: Migraciones Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/apply-migrations.sh'
+      - '.github/workflows/migrate.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: migrate
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Comprobar que existe el secret
+        id: check
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::warning title=Secret ausente::No existe el secret SUPABASE_DB_URL. Créalo en Settings → Secrets and variables → Actions y vuelve a lanzar este workflow. Las migraciones NO se han aplicado."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Aplicar migraciones pendientes
+        if: steps.check.outputs.present == 'true'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: bash scripts/apply-migrations.sh

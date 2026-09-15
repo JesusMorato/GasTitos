@@ -1,0 +1,26 @@
+# El plan gratuito de Supabase pausa el proyecto tras ~7 días sin actividad.
+# Esta consulta trivial cada 3 días cuenta como actividad y lo mantiene despierto.
+# Usa la URL y la clave pública (anon), que no son secretas.
+name: Keepalive Supabase
+
+on:
+  schedule:
+    - cron: '17 6 */3 * *'   # cada 3 días a las 06:17 UTC
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consulta trivial a Supabase
+        env:
+          SUPABASE_URL: https://jenklrikrwhdxzqjefgu.supabase.co
+          SUPABASE_ANON_KEY: sb_publishable_EBRFyH1MDdPDqAdA3GxL7Q_eE4uv5Va
+        run: |
+          code=$(curl -s -o /tmp/body -w '%{http_code}' \
+            "$SUPABASE_URL/rest/v1/households?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "HTTP $code"; cat /tmp/body; echo
+          # 200 = vivo (RLS devuelve lista vacía para anon, es lo esperado)
+          [ "$code" = "200" ]
