@@ -31,7 +31,7 @@ const pct = computed(() => Math.min(100, Math.round(progress.value * 100)))
 const remaining = computed(() => Math.max(0, props.goal.target_amount - props.saved))
 
 function contribute() {
-  if (!(amount.value > 0)) return
+  if (!(Number(amount.value) > 0)) return
   emit('contribute', props.goal, Number(amount.value), date.value, note.value.trim() || null)
   amount.value = 0
   note.value = ''
@@ -39,37 +39,36 @@ function contribute() {
 </script>
 
 <template>
-  <div class="card">
-    <div class="row between">
+  <div class="card" :style="{ '--bar': goal.color }">
+    <div class="row" style="align-items: flex-start">
+      <span class="emoji-badge lg" :style="{ '--badge': goal.color }">{{ goal.emoji }}</span>
       <div class="grow">
-        <h3>
+        <h3 class="row" style="gap: 0.4rem">
           {{ goal.name }}
-          <span v-if="privacyToggle" class="tag" :class="goal.is_public ? '' : 'muted'">
-            {{ goal.is_public ? 'Público' : 'Privado' }}
-          </span>
+          <span v-if="privacyToggle" class="tag" :class="goal.is_public ? '' : 'muted'">{{ goal.is_public ? 'Público' : 'Privado' }}</span>
           <span v-if="pct >= 100" class="tag">¡Conseguido!</span>
         </h3>
-        <div class="muted">
-          {{ formatEur(saved) }} de {{ formatEur(goal.target_amount) }}
+        <div class="muted tnum">
+          <strong>{{ formatEur(saved) }}</strong> de {{ formatEur(goal.target_amount) }}
           <span v-if="goal.deadline"> · antes del {{ formatDate(goal.deadline) }}</span>
         </div>
       </div>
-      <div v-if="editable" class="row" style="gap: .1rem">
-        <button v-if="privacyToggle" class="ghost small" :title="goal.is_public ? 'Hacer privado' : 'Hacer público'" @click="emit('toggle-public', goal)">
+      <div v-if="editable" class="actions">
+        <button v-if="privacyToggle" type="button" class="icon" :title="goal.is_public ? 'Hacer privado' : 'Hacer público'" @click="emit('toggle-public', goal)">
           {{ goal.is_public ? '🔓' : '🔒' }}
         </button>
-        <button class="ghost small" title="Editar" @click="emit('edit', goal)">✏️</button>
-        <button class="ghost small" title="Borrar" @click="emit('delete', goal)">🗑️</button>
+        <button type="button" class="icon" title="Editar" @click="emit('edit', goal)">✏️</button>
+        <button type="button" class="icon" title="Borrar" @click="emit('delete', goal)">🗑️</button>
       </div>
     </div>
 
-    <div class="progress"><div :style="{ width: pct + '%' }" /></div>
-    <div class="row between muted">
-      <span>{{ pct }} %</span>
-      <span v-if="remaining > 0">faltan {{ formatEur(remaining) }}</span>
+    <div class="progress" style="margin-top: 0.7rem"><div :style="{ width: pct + '%' }" /></div>
+    <div class="row between tiny" style="margin-top: 0.3rem">
+      <span class="tnum">{{ pct }} %</span>
+      <span v-if="remaining > 0" class="tnum">faltan {{ formatEur(remaining) }}</span>
     </div>
 
-    <button class="ghost small" style="margin-top: .4rem" @click="open = !open">
+    <button type="button" class="ghost small" style="margin-top: 0.4rem; padding-left: 0" @click="open = !open">
       {{ open ? 'Ocultar aportaciones' : `Aportaciones (${contributions.length})` }}
     </button>
 
@@ -78,17 +77,17 @@ function contribute() {
         <li v-for="c in contributions" :key="c.id">
           <div class="grow">
             <div>{{ nameOf(c.user_id) }}<span v-if="c.note" class="muted"> · {{ c.note }}</span></div>
-            <div class="muted">{{ formatDate(c.contributed_on) }}</div>
+            <div class="tiny">{{ formatDate(c.contributed_on) }}</div>
           </div>
           <span class="amount">{{ formatEur(c.amount) }}</span>
-          <button v-if="editable && c.user_id === currentUserId" class="ghost small" title="Borrar" @click="emit('delete-contribution', c)">🗑️</button>
+          <button v-if="editable && c.user_id === currentUserId" type="button" class="icon" title="Borrar" @click="emit('delete-contribution', c)">🗑️</button>
         </li>
       </ul>
 
-      <form v-if="editable" class="row" style="margin-top: .6rem" @submit.prevent="contribute">
-        <input v-model.number="amount" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="€" style="max-width: 110px" required />
-        <input v-model="date" type="date" style="max-width: 160px" required />
-        <input v-model="note" placeholder="Nota" maxlength="80" class="grow" style="min-width: 120px" />
+      <form v-if="editable" class="row" style="margin-top: 0.6rem" @submit.prevent="contribute">
+        <input v-model.number="amount" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="€" style="max-width: 110px" required aria-label="Importe" />
+        <input v-model="date" type="date" style="max-width: 160px" required aria-label="Fecha" />
+        <input v-model="note" placeholder="Nota" maxlength="80" class="grow" style="min-width: 120px" aria-label="Nota" />
         <button type="submit" class="small">Aportar</button>
       </form>
     </div>

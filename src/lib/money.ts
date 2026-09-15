@@ -1,4 +1,5 @@
 // Utilidades de dinero puras (sin Vue ni Supabase) para poder testearlas fácil.
+import type { SplitMode } from '../types'
 
 export function formatEur(amount: number): string {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount)
@@ -20,66 +21,7 @@ export function sum(values: number[]): number {
 }
 
 export function round2(n: number): number {
-  return Math.round(n * 100) / 100
-}
-
-export interface Balance {
-  /** Total gastado en compartido por cada miembro (user_id → importe). */
-  paidBy: Record<string, number>
-  /** Total de gastos compartidos. */
-  total: number
-  /** Quién debe a quién para quedar en paz, o null si están a la par. */
-  settlement: { from: string; to: string; amount: number } | null
-}
-
-/**
- * Balance de gastos compartidos entre dos miembros, a medias (50/50).
- * Solo se tienen en cuenta los gastos con is_shared = true.
- */
-export function computeBalance(
-  expenses: Array<{ user_id: string; amount: number; is_shared: boolean }>,
-  memberIds: string[],
-): Balance {
-  const paidBy: Record<string, number> = {}
-  for (const id of memberIds) paidBy[id] = 0
-
-  const shared = expenses.filter((e) => e.is_shared)
-  for (const e of shared) {
-    paidBy[e.user_id] = round2((paidBy[e.user_id] ?? 0) + Number(e.amount))
-  }
-  const total = sum(shared.map((e) => e.amount))
-
-  if (memberIds.length !== 2) {
-    return { paidBy, total, settlement: null }
-  }
-
-  const [a, b] = memberIds
-  const diff = round2((paidBy[a] - paidBy[b]) / 2)
-  if (Math.abs(diff) < 0.005) return { paidBy, total, settlement: null }
-
-  // Quien ha pagado menos le debe la mitad de la diferencia al otro.
-  return diff > 0
-    ? { paidBy, total, settlement: { from: b, to: a, amount: diff } }
-    : { paidBy, total, settlement: { from: a, to: b, amount: -diff } }
-}
-
-/** Progreso de un objetivo, entre 0 y 1 (puede superar 1 si se pasa). */
-export function goalProgress(saved: number, target: number): number {
-  if (target <= 0) return 0
-  return round2(saved / target)
-}
-
-/** Agrupa importes por categoría, ordenado de mayor a menor. */
-export function totalsByCategory(
-  expenses: Array<{ category: string; amount: number }>,
-): Array<{ category: string; total: number }> {
-  const map = new Map<string, number>()
-  for (const e of expenses) {
-    map.set(e.category, round2((map.get(e.category) ?? 0) + Number(e.amount)))
-  }
-  return [...map.entries()]
-    .map(([category, total]) => ({ category, total }))
-    .sort((x, y) => y.total - x.total)
+  return Math.round((n + Number.EPSILON) * 100) / 100
 }
 
 /** Devuelve el prefijo YYYY-MM de una fecha ISO. */
@@ -92,4 +34,186 @@ export function formatMonth(yyyymm: string): string {
   const date = new Date(Number(y), Number(m) - 1, 1)
   const label = date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
   return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+/** Progreso de un objetivo, entre 0 y 1 (puede superar 1 si se pasa). */
+export function goalProgress(saved: number, target: number): number {
+  if (target <= 0) return 0
+  return round2(saved / target)
+}
+
+/** Agrupa importes por clave, ordenado de mayor a menor. */
+export function totalsBy<T>(
+  items: T[],
+  key: (item: T) => string,
+  amount: (item: T) => number,
+): Array<{ key: string; total: number }> {
+  const map = new Map<string, number>()
+  for (const it of items) {
+    const k = key(it)
+    map.set(k, round2((map.get(k) ?? 0) + Number(amount(it))))
+  }
+  return [...map.entries()]
+    .map(([k, total]) => ({ key: k, total }))
+    .sort((x, y) => y.total - x.total)
+}
+
+// ------------------------------------------------------------
+// Reparto
+// ------------------------------------------------------------
+
+export interface Share {
+  user_id: string
+  amount: number
+}
+
+/**
+ * Reparte un importe entre varias personas según porcentajes.
+ * Redondea a céntimos y asigna el resto (si lo hay) a la primera persona,
+ * de forma que las partes siempre suman exactamente el importe.
+ */
+export function splitByPct(amount: number, pcts: Array<{ user_id: string; pct: number }>): Share[] {
+  const totalPct = pcts.reduce((a, p) => a + p.pct, 0)
+  if (pcts.length === 0 || totalPct <= 0) return []
+  const cents = Math.round(amount * 100)
+  const shares = pcts.map((p) => ({ user_id: p.user_id, cents: Math.floor((cents * p.pct) / totalPct) }))
+  let rest = cents - shares.reduce((a, s) => a + s.cents, 0)
+  for (let i = 0; rest > 0; i = (i + 1) % shares.length) {
+    shares[i].cents += 1
+    rest -= 1
+  }
+  return shares.map((s) => ({ user_id: s.user_id, amount: s.cents / 100 }))
+}
+
+/**
+ * Calcula las partes de un gasto repartido según el modo elegido.
+ *  - household: porcentaje del hogar (share_pct de cada miembro)
+ *  - equal:     a medias
+ *  - custom:    porcentaje a medida (customPct = % del pagador)
+ *  - exact:     importes exactos (exact = importe de cada uno)
+ *  - other_only: todo para el otro (el pagador no se queda nada)
+ */
+export function computeShares(
+  amount: number,
+  mode: SplitMode,
+  members: ReadonlyArray<{ user_id: string; share_pct: number }>,
+  payerId: string,
+  opts: { customPct?: number; exact?: Record<string, number> } = {},
+): Share[] {
+  switch (mode) {
+    case 'household':
+      return splitByPct(amount, members.map((m) => ({ user_id: m.user_id, pct: m.share_pct })))
+    case 'equal':
+      return splitByPct(amount, members.map((m) => ({ user_id: m.user_id, pct: 1 })))
+    case 'custom': {
+      const pct = Math.min(100, Math.max(0, opts.customPct ?? 50))
+      return splitByPct(
+        amount,
+        members.map((m) => ({ user_id: m.user_id, pct: m.user_id === payerId ? pct : 100 - pct })),
+      )
+    }
+    case 'exact':
+      return members.map((m) => ({ user_id: m.user_id, amount: round2(opts.exact?.[m.user_id] ?? 0) }))
+    case 'other_only':
+      return members.map((m) => ({ user_id: m.user_id, amount: m.user_id === payerId ? 0 : amount }))
+  }
+}
+
+export function sharesAreValid(amount: number, shares: Share[]): boolean {
+  return shares.length > 0 && shares.every((s) => s.amount >= 0) && sum(shares.map((s) => s.amount)) === round2(amount)
+}
+
+/** Texto corto que describe un reparto: "a medias", "70/30", "solo Luis"… */
+export function describeSplit(
+  mode: SplitMode,
+  shares: Share[],
+  amount: number,
+  payerId: string,
+  nameOf: (id: string) => string,
+): string {
+  if (mode === 'equal') return 'a medias'
+  if (mode === 'other_only') {
+    const other = shares.find((s) => s.user_id !== payerId)
+    return other ? `todo para ${nameOf(other.user_id)}` : 'todo'
+  }
+  if (amount <= 0 || shares.length === 0) return ''
+  const pct = shares.map((s) => `${Math.round((s.amount / amount) * 100)}`).join('/')
+  return mode === 'household' ? `${pct} (hogar)` : pct
+}
+
+// ------------------------------------------------------------
+// Balance
+// ------------------------------------------------------------
+
+export interface BalanceExpense {
+  user_id: string
+  amount: number
+  is_shared: boolean
+  funding: 'personal' | 'pot'
+  shares: Share[]
+}
+
+export interface BalanceSettlement {
+  from_user: string
+  to_user: string
+  amount: number
+}
+
+export interface Balance {
+  /** Positivo = le deben; negativo = debe. Uno por miembro. */
+  net: Record<string, number>
+  /** Quién debe a quién para quedar en paz, o null si están a la par. */
+  settlement: { from: string; to: string; amount: number } | null
+}
+
+/**
+ * Balance acumulado de los gastos repartidos (pagados con dinero personal)
+ * menos las liquidaciones registradas. Los gastos del bote no cuentan.
+ */
+export function computeBalance(
+  expenses: BalanceExpense[],
+  settlements: BalanceSettlement[],
+  memberIds: string[],
+): Balance {
+  const net: Record<string, number> = {}
+  for (const id of memberIds) net[id] = 0
+
+  for (const e of expenses) {
+    if (!e.is_shared || e.funding !== 'personal') continue
+    net[e.user_id] = round2((net[e.user_id] ?? 0) + Number(e.amount))
+    for (const s of e.shares) {
+      net[s.user_id] = round2((net[s.user_id] ?? 0) - Number(s.amount))
+    }
+  }
+  for (const s of settlements) {
+    net[s.from_user] = round2((net[s.from_user] ?? 0) + Number(s.amount))
+    net[s.to_user] = round2((net[s.to_user] ?? 0) - Number(s.amount))
+  }
+
+  if (memberIds.length !== 2) return { net, settlement: null }
+  const [a, b] = memberIds
+  if (net[a] > 0.005) return { net, settlement: { from: b, to: a, amount: net[a] } }
+  if (net[b] > 0.005) return { net, settlement: { from: a, to: b, amount: net[b] } }
+  return { net, settlement: null }
+}
+
+/** Cuánto ha pagado cada miembro (solo repartidos con dinero personal). */
+export function paidByMember(expenses: BalanceExpense[], memberIds: string[]): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const id of memberIds) out[id] = 0
+  for (const e of expenses) {
+    if (!e.is_shared || e.funding !== 'personal') continue
+    out[e.user_id] = round2((out[e.user_id] ?? 0) + Number(e.amount))
+  }
+  return out
+}
+
+/** Mi parte de los gastos repartidos (lo que me tocaba, pagase quien pagase). */
+export function myShareTotal(expenses: BalanceExpense[], userId: string): number {
+  let total = 0
+  for (const e of expenses) {
+    if (!e.is_shared || e.funding !== 'personal') continue
+    for (const s of e.shares) if (s.user_id === userId) total += Number(s.amount)
+  }
+  return round2(total)
 }

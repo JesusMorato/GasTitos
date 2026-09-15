@@ -29,12 +29,15 @@ async function loadHousehold() {
     state.members = []
     return
   }
-  const { data: members, error } = await supabase.from('household_members').select('*')
+  const { data: members, error } = await supabase
+    .from('household_members')
+    .select('*')
+    .order('joined_at', { ascending: true })
   if (error) {
     state.error = error.message
     return
   }
-  state.members = (members ?? []) as Member[]
+  state.members = (members ?? []).map((m) => ({ ...m, share_pct: Number(m.share_pct ?? 50) })) as Member[]
   const mine = state.members.find((m) => m.user_id === state.user?.id)
   if (!mine) {
     state.household = null
@@ -62,6 +65,7 @@ export function useSession() {
 
   const me = computed(() => state.members.find((m) => m.user_id === state.user?.id) ?? null)
   const partner = computed(() => state.members.find((m) => m.user_id !== state.user?.id) ?? null)
+  const memberIds = computed(() => state.members.map((m) => m.user_id))
 
   function nameOf(userId: string): string {
     return state.members.find((m) => m.user_id === userId)?.display_name ?? 'Alguien'
@@ -74,12 +78,39 @@ export function useSession() {
     state.members = []
   }
 
+  async function renameHousehold(name: string) {
+    if (!state.household) return
+    const { error } = await supabase.from('households').update({ name: name.trim() }).eq('id', state.household.id)
+    if (error) throw new Error(error.message)
+    await loadHousehold()
+  }
+
+  async function renameMe(displayName: string) {
+    if (!state.user) return
+    const { error } = await supabase
+      .from('household_members')
+      .update({ display_name: displayName.trim() })
+      .eq('user_id', state.user.id)
+    if (error) throw new Error(error.message)
+    await loadHousehold()
+  }
+
+  async function setMySplit(pct: number) {
+    const { error } = await supabase.rpc('set_household_split', { p_my_pct: pct })
+    if (error) throw new Error(error.message)
+    await loadHousehold()
+  }
+
   return {
     state: readonly(state),
     me,
     partner,
+    memberIds,
     nameOf,
     refresh: loadHousehold,
     signOut,
+    renameHousehold,
+    renameMe,
+    setMySplit,
   }
 }

@@ -3,11 +3,17 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { useSession } from '../composables/useSession'
+import SegmentedControl from '../components/SegmentedControl.vue'
 
 const router = useRouter()
 const { state, refresh } = useSession()
 
-const mode = ref<'create' | 'join'>('create')
+type Mode = 'create' | 'join'
+const mode = ref<Mode>('create')
+const modes: Array<{ value: Mode; label: string }> = [
+  { value: 'create', label: 'Crear hogar' },
+  { value: 'join', label: 'Unirme con código' },
+]
 const displayName = ref(state.user?.user_metadata?.full_name?.split(' ')[0] ?? '')
 const householdName = ref('')
 const code = ref('')
@@ -29,22 +35,18 @@ async function submit() {
     return
   }
   await refresh()
-  router.push({ name: 'couple' })
+  router.push({ name: 'personal' })
 }
 </script>
 
 <template>
-  <div class="card" style="max-width: 480px; margin: 1rem auto">
+  <div class="space-yo auth-card card">
     <h1>Casi listo</h1>
     <p class="muted">
-      Tu cuenta aún no pertenece a ningún hogar. Un hogar es la pareja: dos personas, nada más.
-      El primero lo crea y el segundo se une con el código que le pase el primero.
+      Un hogar es la pareja: dos personas, nada más. El primero lo crea y el segundo se une con el código.
     </p>
 
-    <div class="row" style="margin-bottom: 1rem">
-      <button :class="{ secondary: mode !== 'create' }" @click="mode = 'create'">Crear hogar</button>
-      <button :class="{ secondary: mode !== 'join' }" @click="mode = 'join'">Unirme con código</button>
-    </div>
+    <div class="field"><SegmentedControl v-model="mode" :options="modes" /></div>
 
     <form @submit.prevent="submit">
       <div class="field">
@@ -56,16 +58,13 @@ async function submit() {
         <label for="hn">Nombre del hogar</label>
         <input id="hn" v-model="householdName" placeholder="Casa de Ana y Luis" required maxlength="60" />
       </div>
-
       <div v-else class="field">
         <label for="code">Código de invitación</label>
         <input id="code" v-model="code" placeholder="AB12CD34" required style="text-transform: uppercase" />
       </div>
 
       <p v-if="error" class="error">{{ error }}</p>
-      <button type="submit" :disabled="busy" style="width: 100%">
-        {{ mode === 'create' ? 'Crear hogar' : 'Unirme' }}
-      </button>
+      <button type="submit" class="block" :disabled="busy">{{ mode === 'create' ? 'Crear hogar' : 'Unirme' }}</button>
     </form>
   </div>
 </template>

@@ -4,17 +4,19 @@ import LoginView from './views/LoginView.vue'
 import OnboardingView from './views/OnboardingView.vue'
 import CoupleView from './views/CoupleView.vue'
 import PersonalView from './views/PersonalView.vue'
+import SettingsView from './views/SettingsView.vue'
 
 // Modo hash (#/pareja) para que GitHub Pages no tenga que saber de rutas.
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: '/', redirect: '/pareja' },
+    { path: '/', redirect: '/yo' },
     { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
     { path: '/empezar', name: 'onboarding', component: OnboardingView, meta: { needsHousehold: false } },
-    { path: '/pareja', name: 'couple', component: CoupleView },
     { path: '/yo', name: 'personal', component: PersonalView },
-    { path: '/:pathMatch(.*)*', redirect: '/pareja' },
+    { path: '/pareja', name: 'couple', component: CoupleView },
+    { path: '/ajustes', name: 'settings', component: SettingsView },
+    { path: '/:pathMatch(.*)*', redirect: '/yo' },
   ],
 })
 
@@ -37,12 +39,12 @@ router.beforeEach(async (to) => {
   const { state } = useSession()
 
   if (to.meta.public) {
-    return state.user ? { name: 'couple' } : true
+    return state.user ? { name: 'personal' } : true
   }
   if (!state.user) return { name: 'login' }
 
   const needsHousehold = to.meta.needsHousehold !== false
   if (needsHousehold && !state.household) return { name: 'onboarding' }
-  if (!needsHousehold && state.household) return { name: 'couple' }
+  if (!needsHousehold && state.household) return { name: 'personal' }
   return true
 })

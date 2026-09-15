@@ -25,7 +25,7 @@ async function loginEmail() {
     error.value = translate(e.message)
     return
   }
-  router.push({ name: 'couple' })
+  router.push({ name: 'personal' })
 }
 
 async function loginGoogle() {
@@ -39,12 +39,12 @@ async function loginGoogle() {
     busy.value = false
     error.value = translate(e.message)
   }
-  // Si va bien, el navegador se va a Google y vuelve solo.
 }
 </script>
 
 <template>
-  <div class="card" style="max-width: 420px; margin: 2rem auto">
+  <div class="space-yo auth-card card">
+    <div style="font-size: 2.2rem; margin-bottom: 0.3rem">💸</div>
     <h1>Entrar en GasTitos</h1>
     <p class="muted">Gastos y ahorro para dos. Solo pueden entrar las cuentas dadas de alta.</p>
 
@@ -58,15 +58,11 @@ async function loginGoogle() {
         <input id="password" v-model="password" type="password" autocomplete="current-password" required />
       </div>
       <p v-if="error" class="error">{{ error }}</p>
-      <button type="submit" :disabled="busy" style="width: 100%">Entrar</button>
+      <button type="submit" class="block" :disabled="busy">Entrar</button>
     </form>
 
-    <div class="row" style="margin: 1rem 0; justify-content: center">
-      <span class="muted">o</span>
-    </div>
+    <div class="row" style="margin: 1rem 0; justify-content: center"><span class="tiny">o</span></div>
 
-    <button class="secondary" style="width: 100%" :disabled="busy" @click="loginGoogle">
-      Entrar con Google
-    </button>
+    <button type="button" class="secondary block" :disabled="busy" @click="loginGoogle">Entrar con Google</button>
   </div>
 </template>

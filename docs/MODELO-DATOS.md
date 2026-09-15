@@ -71,3 +71,43 @@ Consecuencias prácticas:
 
 Ambas fallan si el usuario ya pertenece a un hogar o si el hogar ya tiene dos
 miembros.
+
+## Añadido en 0002 (fase 1: reparto real)
+
+### categories — categorías del hogar
+`name`, `emoji`, `color`, `sort_order`. Únicas por hogar y nombre. Se siembran 10 por
+defecto al crear el hogar. Los dos miembros pueden editarlas. No se puede borrar una
+categoría con gastos (FK restrict).
+
+### household_members.share_pct
+Porcentaje de reparto por defecto de cada miembro (50 por defecto). Se cambia con la
+función `set_household_split(p_my_pct)`, que ajusta el del otro para sumar 100.
+
+### expenses: nuevas columnas
+| columna | valores | significado |
+|---|---|---|
+| category_id | → categories | sustituye al texto `category` |
+| funding | `personal` \| `pot` | con qué dinero se pagó: del pagador o de la cuenta conjunta |
+| split_mode | `household` \| `equal` \| `custom` \| `exact` \| `other_only` | cómo se repartió (solo informativo; las partes reales están en expense_shares) |
+
+Tipos de gasto resultantes:
+- **Personal:** `is_shared=false`. `user_id` = dueño.
+- **Repartido:** `is_shared=true, funding='personal'`. `user_id` = quién pagó. Partes en `expense_shares`.
+- **Del bote:** `is_shared=true, funding='pot'`. `user_id` = quién lo apuntó. Sin partes. No entra en el balance.
+
+### expense_shares — cuánto le toca a cada uno
+`(expense_id, user_id, amount)`. Solo se escriben a través de `save_expense()`, que
+valida que las partes sumen el importe. Se ven si se ve el gasto.
+
+### settlements — pagos entre la pareja
+`from_user`, `to_user`, `amount`, `settled_on`, `note`. Los ven y borran los dos; los
+crea cualquiera de los dos siempre que sea parte del pago.
+
+### Balance
+`net[persona] = Σ pagado en repartidos − Σ su parte + Σ pagos hechos − Σ pagos recibidos`.
+Con dos personas es un solo número con signo. Cálculo en `src/lib/money.ts` (`computeBalance`), testeado.
+
+### save_expense(p jsonb)
+Única forma de crear/editar gastos desde la app. Recibe el gasto y sus partes y lo guarda
+todo en una transacción. Comprueba: hogar, categoría, pagador miembro, partes de miembros
+y suma exacta.

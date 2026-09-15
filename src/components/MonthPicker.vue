@@ -15,9 +15,9 @@ function shift(delta: number) {
 </script>
 
 <template>
-  <div class="row between">
-    <button class="ghost" aria-label="Mes anterior" @click="shift(-1)">‹</button>
-    <strong>{{ label }}</strong>
-    <button class="ghost" aria-label="Mes siguiente" @click="shift(1)">›</button>
+  <div class="row between" style="margin: 0.2rem 0 0.8rem">
+    <button type="button" class="icon" aria-label="Mes anterior" @click="shift(-1)">‹</button>
+    <h2>{{ label }}</h2>
+    <button type="button" class="icon" aria-label="Mes siguiente" @click="shift(1)">›</button>
   </div>
 </template>

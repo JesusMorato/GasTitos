@@ -50,6 +50,13 @@ GitHub Actions.
   `useData.ts`. Cálculos de dinero en `src/lib/money.ts` (puro, testeado).
 - Los componentes reciben datos por props y emiten eventos; las llamadas a Supabase
   se concentran en `src/composables/useData.ts` y `useSession.ts`.
+- Los gastos se crean y editan SIEMPRE con la función `save_expense` (RPC), nunca con
+  insert/update directos: es la que mantiene coherentes las partes del reparto.
+- Diseño: tokens en `src/style.css`. Cada vista envuelve su contenido en `.space-yo`
+  (verde) o `.space-pareja` (ciruela), que fijan `--accent`. Modales con
+  `components/Sheet.vue`. Emojis y colores los elige el usuario con `EmojiPicker.vue`.
+- El editor de gastos es global (`useEditor.ts`): el botón ➕ de `App.vue` y las vistas
+  comparten el mismo formulario.
 
 ## Modelo de datos (resumen)
 

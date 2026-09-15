@@ -262,7 +262,7 @@ una: tests en verde, build correcto, push, documentación actualizada.
 | Fase | Contenido | Tamaño | Criterio de "hecho" |
 |---|---|---|---|
 | **0. Prueba de humo** | Las dos cuentas entran, se unen, apuntan gastos, candado funciona. Arreglar lo que salga. | S | Lista de bugs cerrada. |
-| **1. Reparto real** | Porcentaje del hogar en Ajustes. Modos de reparto por gasto. `expense_shares`. Balance con signo. Botón Saldar + historial. | M | "Ana debe X a Luis" es correcto con repartos mixtos y se pone a cero al saldar. |
+| **1. Reparto real** ✅ 2026-09-15 | Porcentaje del hogar en Ajustes. Modos de reparto por gasto. `expense_shares`. Balance con signo. Botón Saldar + historial. | M | "Ana debe X a Luis" es correcto con repartos mixtos y se pone a cero al saldar. |
 | **2. Bote común** | Aportaciones, gastos del bote, saldo, esperado mensual por persona, donut del bote. | M | El saldo cuadra con aportaciones − gastos. |
 | **3. Mi mes real** | Yo → Resumen con el agregado (personal + mi parte + al bote). Donut y barras 6 meses. Chart.js. | M | La cifra del mes coincide con lo que sale de mi cuenta. |
 | **4. Ahorro v2** ⭐ | Huchas con emoji, tipos YNAB, plan mensual, proyección, sacar dinero, "este mes te toca X", gráfica real vs plan, barras 12 meses. | L | Un objetivo con fecha muestra plan y proyección correctos. |
@@ -286,7 +286,8 @@ es la función estrella y conviene tenerla pronto para usarla de verdad; el bote
 1. **Porcentaje por defecto:** ✅ DECIDIDO 2026-09-15: 50/50 por defecto, editable en
    Ajustes del hogar. (Pregunta original: ¿50/50 o proporcional a ingresos? Se puede
    cambiar después, pero afecta a cómo se guardan los gastos desde el día uno.)
-2. **Bote:** ¿registráis las aportaciones reales (transferencias) o solo queréis
+2. **Bote:** ✅ DECIDIDO 2026-09-15: por ahora solo gastos pagados con la cuenta conjunta,
+   sin registrar aportaciones. (Pregunta original: ¿registráis las aportaciones reales o solo queréis
    apuntar los gastos que salen de la cuenta conjunta? Sin aportaciones no hay
    saldo, solo gasto.
 3. **Ingresos:** ¿los registráis? Sin ellos no hay tasa de ahorro ni "podrías

@@ -1,46 +1,61 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useSession } from '../composables/useSession'
-import { useData, type ExpenseInput, type GoalInput } from '../composables/useData'
-import { computeBalance, formatEur, monthOf, sum, todayIso, totalsByCategory } from '../lib/money'
-import type { Expense, SavingsGoal, Contribution } from '../types'
+import { useData, type GoalInput } from '../composables/useData'
+import { useEditor, type ExpenseRow } from '../composables/useEditor'
+import { computeBalance, formatEur, monthOf, paidByMember, sum, todayIso, totalsBy } from '../lib/money'
+import type { Contribution, SavingsGoal, Settlement } from '../types'
+import { formatDate } from '../lib/money'
+import SegmentedControl from '../components/SegmentedControl.vue'
 import MonthPicker from '../components/MonthPicker.vue'
-import ExpenseForm from '../components/ExpenseForm.vue'
+import BalanceCard from '../components/BalanceCard.vue'
 import ExpenseList from '../components/ExpenseList.vue'
+import SettleForm from '../components/SettleForm.vue'
 import GoalForm from '../components/GoalForm.vue'
 import GoalCard from '../components/GoalCard.vue'
 
-const { state, partner, nameOf } = useSession()
-const data = useData()
+type Tab = 'split' | 'pot' | 'together'
 
+const { state, partner, memberIds, nameOf } = useSession()
+const data = useData()
+const editor = useEditor()
+
+const tab = ref<Tab>('split')
+const tabs: Array<{ value: Tab; label: string }> = [
+  { value: 'split', label: 'Repartidos' },
+  { value: 'pot', label: 'Bote' },
+  { value: 'together', label: 'Juntos' },
+]
 const month = ref(monthOf(todayIso()))
-const showExpenseForm = ref(false)
-const editingExpense = ref<Expense | undefined>()
+const showSettle = ref(false)
+const showHistory = ref(false)
 const showGoalForm = ref(false)
 const editingGoal = ref<SavingsGoal | undefined>()
 const actionError = ref<string | null>(null)
 
-onMounted(() => data.loadAll().catch(() => {}))
+onMounted(() => data.ensureLoaded())
 
 const userId = computed(() => state.user!.id)
-const memberIds = computed(() => state.members.map((m) => m.user_id))
+const rows = computed<ExpenseRow[]>(() => data.expensesWithShares.value)
 
-const sharedThisMonth = computed(() =>
-  data.expenses.value.filter((e) => e.is_shared && monthOf(e.spent_on) === month.value),
-)
-const balance = computed(() => computeBalance(sharedThisMonth.value, memberIds.value))
-const byCategory = computed(() => totalsByCategory(sharedThisMonth.value).slice(0, 5))
+// --- Repartidos ---
+const splitAll = computed(() => rows.value.filter((e) => e.is_shared && e.funding === 'personal'))
+const splitMonth = computed(() => splitAll.value.filter((e) => monthOf(e.spent_on) === month.value))
+const balance = computed(() => computeBalance(splitAll.value, data.settlements.value, memberIds.value))
+const paidMonth = computed(() => paidByMember(splitMonth.value, memberIds.value))
+const splitMonthTotal = computed(() => sum(splitMonth.value.map((e) => e.amount)))
+
+// --- Bote ---
+const potMonth = computed(() => rows.value.filter((e) => e.is_shared && e.funding === 'pot' && monthOf(e.spent_on) === month.value))
+const potTotal = computed(() => sum(potMonth.value.map((e) => e.amount)))
+const potByCategory = computed(() => totalsBy(potMonth.value, (e) => e.category_id, (e) => e.amount).slice(0, 6))
+
+// --- Juntos ---
 const sharedGoals = computed(() => data.goals.value.filter((g) => g.is_shared))
-
-// Lo que mi pareja ha decidido hacer público (solo lectura)
 const partnerPublicExpenses = computed(() =>
-  data.expenses.value.filter(
-    (e) => !e.is_shared && e.is_public && e.user_id !== userId.value && monthOf(e.spent_on) === month.value,
-  ),
+  rows.value.filter((e) => !e.is_shared && e.is_public && e.user_id !== userId.value && monthOf(e.spent_on) === month.value),
 )
-const partnerPublicGoals = computed(() =>
-  data.goals.value.filter((g) => !g.is_shared && g.is_public && g.user_id !== userId.value),
-)
+const partnerPublicGoals = computed(() => data.goals.value.filter((g) => !g.is_shared && g.is_public && g.user_id !== userId.value))
 
 function contributionsOf(goalId: string): Contribution[] {
   return data.contributions.value.filter((c) => c.goal_id === goalId)
@@ -55,18 +70,15 @@ async function run(fn: () => Promise<void>) {
   }
 }
 
-function saveExpense(input: ExpenseInput) {
-  const editing = editingExpense.value
-  showExpenseForm.value = false
-  editingExpense.value = undefined
-  run(() => (editing ? data.updateExpense(editing.id, input) : data.addExpense(state.household!.id, input)))
+function deleteExpense(x: ExpenseRow) {
+  if (confirm(`¿Borrar el gasto de ${formatEur(x.amount)}?`)) run(() => data.deleteExpense(x.id))
 }
-function editExpense(x: Expense) {
-  editingExpense.value = x
-  showExpenseForm.value = true
+function saveSettlement(v: Pick<Settlement, 'from_user' | 'to_user' | 'amount' | 'settled_on' | 'note'>) {
+  showSettle.value = false
+  run(() => data.addSettlement(state.household!.id, v))
 }
-function deleteExpense(x: Expense) {
-  if (confirm(`¿Borrar el gasto de ${formatEur(x.amount)} en ${x.category}?`)) run(() => data.deleteExpense(x.id))
+function deleteSettlement(s: Settlement) {
+  if (confirm('¿Borrar este pago? El balance volverá a incluirlo.')) run(() => data.deleteSettlement(s.id))
 }
 
 function saveGoal(input: GoalInput) {
@@ -80,7 +92,7 @@ function editGoal(g: SavingsGoal) {
   showGoalForm.value = true
 }
 function deleteGoal(g: SavingsGoal) {
-  if (confirm(`¿Borrar el objetivo "${g.name}" y todas sus aportaciones?`)) run(() => data.deleteGoal(g.id))
+  if (confirm(`¿Borrar la hucha "${g.name}" y todas sus aportaciones?`)) run(() => data.deleteGoal(g.id))
 }
 function contribute(g: SavingsGoal, amount: number, date: string, note: string | null) {
   run(() => data.addContribution(g.id, userId.value, amount, date, note))
@@ -91,120 +103,182 @@ function deleteContribution(c: Contribution) {
 </script>
 
 <template>
-  <div v-if="!partner" class="card">
-    <h2>Invita a tu pareja</h2>
-    <p>Todavía estás solo en el hogar <strong>{{ state.household?.name }}</strong>. Pásale este código para que se una:</p>
-    <p class="big" style="letter-spacing: .15em">{{ state.household?.invite_code }}</p>
-    <p class="muted">Mientras tanto ya puedes ir apuntando gastos.</p>
-  </div>
+  <div class="space-pareja stack">
+    <div v-if="!partner" class="card">
+      <h2>Invita a tu pareja</h2>
+      <p class="muted">Todavía estás solo en <strong>{{ state.household?.name }}</strong>. Pásale este código para que se una:</p>
+      <div class="code-invite">{{ state.household?.invite_code }}</div>
+    </div>
 
-  <div class="card">
-    <MonthPicker v-model="month" />
-    <div class="grid2" style="margin-top: .8rem">
-      <div>
-        <div class="muted">Gastado en pareja</div>
-        <div class="big">{{ formatEur(balance.total) }}</div>
-      </div>
-      <div>
-        <div class="muted">Balance</div>
-        <div v-if="balance.settlement">
-          <strong>{{ nameOf(balance.settlement.from) }}</strong> debe
-          <strong>{{ formatEur(balance.settlement.amount) }}</strong> a
-          <strong>{{ nameOf(balance.settlement.to) }}</strong>
+    <SegmentedControl v-model="tab" :options="tabs" />
+
+    <p v-if="data.error.value || actionError" class="error">{{ actionError ?? data.error.value }}</p>
+
+    <!-- ===== Repartidos ===== -->
+    <template v-if="tab === 'split'">
+      <BalanceCard :balance="balance" :members="state.members" :current-user-id="userId" :name-of="nameOf" @settle="showSettle = true" />
+
+      <div class="card">
+        <MonthPicker v-model="month" />
+        <div class="kpis">
+          <div class="kpi">
+            <div class="label">Repartido este mes</div>
+            <div class="value">{{ formatEur(splitMonthTotal) }}</div>
+          </div>
+          <div v-for="m in state.members" :key="m.user_id" class="kpi">
+            <div class="label">Pagó {{ m.display_name }}</div>
+            <div class="value">{{ formatEur(paidMonth[m.user_id] ?? 0) }}</div>
+          </div>
         </div>
-        <div v-else class="ok">Estáis en paz 🎉</div>
       </div>
-    </div>
-    <div v-if="state.members.length" class="muted" style="margin-top: .5rem">
-      <span v-for="m in state.members" :key="m.user_id" style="margin-right: 1rem">
-        {{ m.display_name }}: {{ formatEur(balance.paidBy[m.user_id] ?? 0) }}
-      </span>
-    </div>
-    <div v-if="byCategory.length" style="margin-top: .8rem">
-      <div class="muted">Por categoría</div>
-      <ul class="list">
-        <li v-for="c in byCategory" :key="c.category">
-          <span class="grow">{{ c.category }}</span>
-          <span class="amount">{{ formatEur(c.total) }}</span>
-        </li>
-      </ul>
-    </div>
-  </div>
 
-  <p v-if="data.error.value || actionError" class="error">{{ actionError ?? data.error.value }}</p>
+      <div class="card">
+        <div class="section-title" style="margin-top: 0">
+          <h2>Gastos repartidos</h2>
+          <button type="button" class="small secondary" :disabled="!partner" @click="editor.openNew('shared')">+ Añadir</button>
+        </div>
+        <ExpenseList
+          :expenses="splitMonth"
+          :category-by-id="data.categoryById.value"
+          :name-of="nameOf"
+          editable
+          show-payer
+          show-split
+          empty-text="Ningún gasto repartido este mes."
+          @edit="editor.openEdit"
+          @delete="deleteExpense"
+        />
+      </div>
 
-  <div class="card">
-    <div class="row between">
-      <h2>Gastos compartidos</h2>
-      <button class="small" @click="editingExpense = undefined; showExpenseForm = true">+ Gasto</button>
-    </div>
-    <ExpenseList
-      :expenses="sharedThisMonth"
+      <div class="card flat">
+        <button type="button" class="ghost small" style="padding-left: 0" @click="showHistory = !showHistory">
+          {{ showHistory ? 'Ocultar pagos entre vosotros' : `Pagos entre vosotros (${data.settlements.value.length})` }}
+        </button>
+        <ul v-if="showHistory" class="list">
+          <li v-if="data.settlements.value.length === 0" class="muted">Todavía no habéis saldado cuentas.</li>
+          <li v-for="s in data.settlements.value" :key="s.id">
+            <span class="emoji-badge" :style="{ '--badge': 'var(--pareja)' }">💸</span>
+            <div class="grow">
+              <div>{{ nameOf(s.from_user) }} → {{ nameOf(s.to_user) }}<span v-if="s.note" class="muted"> · {{ s.note }}</span></div>
+              <div class="tiny">{{ formatDate(s.settled_on) }}</div>
+            </div>
+            <span class="amount">{{ formatEur(s.amount) }}</span>
+            <button type="button" class="icon" title="Borrar" @click="deleteSettlement(s)">🗑️</button>
+          </li>
+        </ul>
+      </div>
+    </template>
+
+    <!-- ===== Bote ===== -->
+    <template v-else-if="tab === 'pot'">
+      <div class="card accent">
+        <div class="tiny" style="text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700">Gastado del bote</div>
+        <div class="hero-number" style="margin: 0.2rem 0">{{ formatEur(potTotal) }}</div>
+        <div class="muted">Pagado con la cuenta conjunta. No entra en el balance.</div>
+      </div>
+
+      <div class="card">
+        <MonthPicker v-model="month" />
+        <div v-if="potByCategory.length" class="bars">
+          <div v-for="c in potByCategory" :key="c.key" class="bar-row" :style="{ '--bar': data.categoryById.value[c.key]?.color }">
+            <div>
+              <span>{{ data.categoryById.value[c.key]?.emoji }} {{ data.categoryById.value[c.key]?.name }}</span>
+              <div class="progress"><div :style="{ width: (potTotal ? (c.total / potTotal) * 100 : 0) + '%' }" /></div>
+            </div>
+            <span class="amount tnum" style="font-weight: 600">{{ formatEur(c.total) }}</span>
+          </div>
+        </div>
+        <div v-else class="empty">Nada pagado con el bote este mes.</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title" style="margin-top: 0">
+          <h2>Gastos del bote</h2>
+          <button type="button" class="small secondary" @click="editor.openNew('pot')">+ Añadir</button>
+        </div>
+        <ExpenseList
+          :expenses="potMonth"
+          :category-by-id="data.categoryById.value"
+          :name-of="nameOf"
+          editable
+          empty-text="Ningún gasto del bote este mes."
+          @edit="editor.openEdit"
+          @delete="deleteExpense"
+        />
+      </div>
+    </template>
+
+    <!-- ===== Juntos ===== -->
+    <template v-else>
+      <div class="section-title" style="margin-top: 0.2rem">
+        <h2>Huchas en pareja</h2>
+        <button type="button" class="small secondary" @click="editingGoal = undefined; showGoalForm = true">+ Hucha</button>
+      </div>
+      <div v-if="sharedGoals.length === 0" class="card empty">
+        <span class="big-emoji">🏖️</span>
+        Aún no tenéis huchas comunes. ¿Un viaje? ¿Un colchón de emergencia?
+      </div>
+      <GoalCard
+        v-for="g in sharedGoals"
+        :key="g.id"
+        :goal="g"
+        :contributions="contributionsOf(g.id)"
+        :saved="data.savedByGoal.value[g.id] ?? 0"
+        :name-of="nameOf"
+        :current-user-id="userId"
+        editable
+        @edit="editGoal"
+        @delete="deleteGoal"
+        @contribute="contribute"
+        @delete-contribution="deleteContribution"
+      />
+
+      <template v-if="partner">
+        <div class="section-title">
+          <h2>Lo que {{ partner.display_name }} comparte contigo</h2>
+        </div>
+        <p class="muted">Gastos y huchas personales que ha hecho públicos. Solo lectura.</p>
+        <div class="card">
+          <MonthPicker v-model="month" />
+          <div class="tiny" style="margin-bottom: 0.4rem">
+            Gastos públicos: <strong class="tnum">{{ formatEur(sum(partnerPublicExpenses.map((e) => e.amount))) }}</strong>
+          </div>
+          <ExpenseList
+            :expenses="partnerPublicExpenses"
+            :category-by-id="data.categoryById.value"
+            :name-of="nameOf"
+            :editable="false"
+            empty-text="No ha hecho público ningún gasto este mes."
+          />
+        </div>
+        <div v-if="partnerPublicGoals.length === 0" class="card flat empty">No ha hecho pública ninguna hucha.</div>
+        <GoalCard
+          v-for="g in partnerPublicGoals"
+          :key="g.id"
+          :goal="g"
+          :contributions="contributionsOf(g.id)"
+          :saved="data.savedByGoal.value[g.id] ?? 0"
+          :name-of="nameOf"
+          :current-user-id="userId"
+          :editable="false"
+        />
+      </template>
+    </template>
+
+    <SettleForm
+      v-if="showSettle"
+      :members="state.members"
+      :suggested="balance.settlement"
       :name-of="nameOf"
-      editable
-      show-payer
-      @edit="editExpense"
-      @delete="deleteExpense"
+      @save="saveSettlement"
+      @close="showSettle = false"
+    />
+    <GoalForm
+      v-if="showGoalForm"
+      shared
+      :initial="editingGoal"
+      @save="saveGoal"
+      @close="showGoalForm = false; editingGoal = undefined"
     />
   </div>
-
-  <div class="row between" style="margin-bottom: .5rem">
-    <h2>Objetivos en pareja</h2>
-    <button class="small" @click="editingGoal = undefined; showGoalForm = true">+ Objetivo</button>
-  </div>
-  <p v-if="sharedGoals.length === 0" class="muted card">Aún no tenéis objetivos comunes. ¿Un viaje? ¿Un colchón de emergencia?</p>
-  <GoalCard
-    v-for="g in sharedGoals"
-    :key="g.id"
-    :goal="g"
-    :contributions="contributionsOf(g.id)"
-    :saved="data.savedByGoal.value[g.id] ?? 0"
-    :name-of="nameOf"
-    :current-user-id="userId"
-    editable
-    @edit="editGoal"
-    @delete="deleteGoal"
-    @contribute="contribute"
-    @delete-contribution="deleteContribution"
-  />
-
-  <template v-if="partner">
-    <h2 style="margin-top: 1.5rem">Lo que {{ partner.display_name }} comparte contigo</h2>
-    <p class="muted">Gastos y objetivos personales que ha marcado como públicos. Solo lectura.</p>
-
-    <div class="card">
-      <h3>Gastos personales públicos · {{ formatEur(sum(partnerPublicExpenses.map((e) => e.amount))) }}</h3>
-      <ExpenseList :expenses="partnerPublicExpenses" :name-of="nameOf" :editable="false" />
-    </div>
-
-    <p v-if="partnerPublicGoals.length === 0" class="muted card">No ha hecho público ningún objetivo.</p>
-    <GoalCard
-      v-for="g in partnerPublicGoals"
-      :key="g.id"
-      :goal="g"
-      :contributions="contributionsOf(g.id)"
-      :saved="data.savedByGoal.value[g.id] ?? 0"
-      :name-of="nameOf"
-      :current-user-id="userId"
-      :editable="false"
-    />
-  </template>
-
-  <ExpenseForm
-    v-if="showExpenseForm"
-    shared
-    :members="state.members"
-    :current-user-id="userId"
-    :initial="editingExpense"
-    @save="saveExpense"
-    @close="showExpenseForm = false; editingExpense = undefined"
-  />
-  <GoalForm
-    v-if="showGoalForm"
-    shared
-    :initial="editingGoal"
-    @save="saveGoal"
-    @close="showGoalForm = false; editingGoal = undefined"
-  />
-
 </template>

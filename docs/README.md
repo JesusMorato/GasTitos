@@ -14,6 +14,22 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-15 · v0.2 — fase 1: reparto real + rediseño.**
+
+- Migración `0002_reparto.sql`: categorías por hogar con emoji y color, porcentaje de
+  reparto por miembro, gastos del bote, partes por gasto (`expense_shares`),
+  liquidaciones (`settlements`), función `save_expense()`.
+- Tres tipos de gasto: personal, repartido (5 modos de reparto) y del bote.
+- Pareja → pestañas Repartidos (balance con signo, Saldar, historial de pagos),
+  Bote (gastos de la cuenta conjunta por categoría) y Juntos (huchas comunes + lo que
+  la pareja hace público).
+- Yo → "Mi mes" = personal + mi parte de los repartidos, por categoría; huchas.
+- Ajustes: nombre, hogar, reparto por defecto (slider), editor de categorías (emoji,
+  color, orden), código de invitación.
+- Diseño nuevo: Sora + Manrope, tarjetas, navegación inferior con botón ➕ y menú
+  rápido, hojas modales, modo oscuro automático, color por espacio (verde Yo, ciruela
+  Pareja).
+
 **2026-09-15 · v0.1 — esqueleto inicial.**
 Hecho en la primera sesión:
 
