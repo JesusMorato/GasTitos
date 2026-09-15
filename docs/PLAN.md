@@ -283,7 +283,8 @@ es la función estrella y conviene tenerla pronto para usarla de verdad; el bote
 
 ## 7. Decisiones que tienes que tomar tú
 
-1. **Porcentaje por defecto:** ¿50/50 o proporcional a ingresos? (Se puede
+1. **Porcentaje por defecto:** ✅ DECIDIDO 2026-09-15: 50/50 por defecto, editable en
+   Ajustes del hogar. (Pregunta original: ¿50/50 o proporcional a ingresos? Se puede
    cambiar después, pero afecta a cómo se guardan los gastos desde el día uno.)
 2. **Bote:** ¿registráis las aportaciones reales (transferencias) o solo queréis
    apuntar los gastos que salen de la cuenta conjunta? Sin aportaciones no hay
