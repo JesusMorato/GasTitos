@@ -8,6 +8,9 @@ público/privado por elemento).
 El dueño del proyecto es principiante: explica los cambios en lenguaje sencillo y sin
 jerga innecesaria. Una cosa cada vez.
 
+Cuando pida un cambio, desarróllalo directamente: nada de mockups, capturas ni vistas
+previas salvo que las pida expresamente.
+
 ## Stack
 
 - Frontend: Vue 3 + TypeScript + Vite. Router en modo hash. Sin Pinia (estado en
