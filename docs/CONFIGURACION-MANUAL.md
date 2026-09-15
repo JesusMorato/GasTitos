@@ -28,15 +28,15 @@ Marca cada punto cuando lo termines.
       Branch: `gh-pages`, carpeta `/ (root)`. Save.
 - [x] En 1-2 minutos: https://jesusmorato.github.io/GasTitos/
 
-## 4. Crear las dos cuentas y cerrar el registro
+## 4. Crear las dos cuentas y cerrar el registro ✅ (hecho el 2026-09-15)
 
-- [ ] Supabase → **Authentication → Users → Add user → Create new user**.
+- [x] Supabase → **Authentication → Users → Add user → Create new user**.
       Email y contraseña de la primera persona. Marca *Auto Confirm User*.
-- [ ] Repite para la segunda persona.
-- [ ] Supabase → **Authentication → Sign In / Providers → Email**: desactiva
+- [x] Repite para la segunda persona.
+- [x] Supabase → **Authentication → Sign In / Providers → Email**: desactiva
       *Allow new users to sign up*. (Así nadie más puede registrarse, ni por email
       ni por Google.)
-- [ ] Supabase → **Authentication → URL Configuration**:
+- [x] Supabase → **Authentication → URL Configuration**:
       - Site URL: `https://jesusmorato.github.io/GasTitos/`
       - Redirect URLs: añade `https://jesusmorato.github.io/GasTitos/**`
         y, para probar en local, `http://localhost:5173/GasTitos/**`
@@ -73,8 +73,8 @@ allowed" y la app mostrará *"Esta app es privada"*.
 
 ## 6. Primera prueba
 
-- [ ] Abre https://jesusmorato.github.io/GasTitos/ y entra con la primera cuenta.
-- [ ] Crea el hogar. Copia el código de invitación.
+- [x] Abre https://jesusmorato.github.io/GasTitos/ y entra con la primera cuenta.
+- [x] Crea el hogar. Copia el código de invitación.
 - [ ] Entra con la segunda cuenta (otro navegador o incógnito) y únete con el código.
 - [ ] Apunta un gasto compartido y uno personal; comprueba desde la otra cuenta que
       el personal no se ve hasta que pulsas el candado.

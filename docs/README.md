@@ -24,7 +24,9 @@ Hecho en la primera sesión:
 - Workflows: deploy a GitHub Pages, migraciones automáticas, keepalive.
 - Tests de las utilidades de dinero.
 
-Pendiente de configuración manual (ver `CONFIGURACION-MANUAL.md`).
+Configuración manual completada salvo Google login y la prueba con la segunda cuenta
+(ver `CONFIGURACION-MANUAL.md`). La app funciona de extremo a extremo: el primer hogar
+se creó el 2026-09-15.
 
 ## Decisiones tomadas
 
