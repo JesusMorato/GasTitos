@@ -128,7 +128,7 @@ p { margin: 0 0 0.75rem; }
 .stack { display: flex; flex-direction: column; gap: 0.75rem; }
 .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.container { width: 100%; max-width: 680px; margin: 0 auto; padding-inline: 16px; padding-block: 12px calc(var(--nav-h) + 24px); }
+.container { width: 100%; max-width: 680px; margin: 0 auto; padding-inline: 16px; padding-block: 12px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom)); }
 
 /* ---------- topbar ---------- */
 .topbar {
@@ -255,7 +255,20 @@ label { display: block; font-size: 0.8rem; color: var(--ink-2); margin-bottom: 0
   background: color-mix(in srgb, var(--badge, var(--accent)) 16%, var(--surface));
 }
 .emoji-badge.lg { width: 52px; height: 52px; font-size: 1.7rem; border-radius: 16px; }
-.actions { display: flex; gap: 0; flex: none; }
+.actions { display: flex; gap: 0; flex: none; position: relative; }
+.menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 40;
+  min-width: 190px; padding: 4px; display: grid;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--shadow);
+}
+.menu.up { top: auto; bottom: calc(100% + 4px); }
+.menu button {
+  justify-content: flex-start; text-align: left; font-weight: 500;
+  background: transparent; color: var(--ink); border-color: transparent;
+  padding: 0.6rem 0.75rem; border-radius: 8px;
+}
+.menu button:hover { background: var(--surface-2); }
+.menu button.destructive { color: var(--neg); }
 
 /* ---------- progress ---------- */
 .progress { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
@@ -272,8 +285,10 @@ label { display: block; font-size: 0.8rem; color: var(--ink-2); margin-bottom: 0
 .sheet {
   background: var(--surface); width: 100%; max-width: 560px;
   border-radius: var(--r-lg) var(--r-lg) 0 0; padding: 0.75rem 1.1rem calc(1rem + env(safe-area-inset-bottom));
-  max-height: 92dvh; overflow: auto; box-shadow: var(--shadow-up);
+  max-height: 92dvh; overflow: auto; overscroll-behavior: contain; box-shadow: var(--shadow-up);
 }
+/* Mientras hay una hoja abierta (ver lib/scrollLock.ts): el body se fija en su sitio. */
+body.sheet-open { position: fixed; left: 0; right: 0; overflow: hidden; }
 .sheet .handle { width: 40px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 0.8rem; }
 .sheet header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.9rem; }
 @media (min-width: 640px) {
@@ -291,7 +306,6 @@ label { display: block; font-size: 0.8rem; color: var(--ink-2); margin-bottom: 0
 .quick button { justify-content: flex-start; background: var(--surface-2); color: var(--ink); border-color: transparent; padding: 0.8rem 0.9rem; border-radius: var(--r-md); text-align: left; }
 .quick button .emoji-badge { width: 36px; height: 36px; font-size: 1.1rem; }
 .quick button small { display: block; color: var(--ink-2); font-weight: 500; font-size: 0.8rem; }
-.quick button.destructive { color: var(--neg); }
 
 /* ---------- emoji picker ---------- */
 .emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 4px; }

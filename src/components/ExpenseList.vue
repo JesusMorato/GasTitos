@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Category, Expense } from '../types'
 import { describeSplit, formatDate, formatEur, type Share } from '../lib/money'
-import Sheet from './Sheet.vue'
 
 type Row = Expense & { shares: Share[] }
 
-const props = defineProps<{
+defineProps<{
   expenses: Row[]
   categoryById: Record<string, Category>
   nameOf: (id: string) => string
@@ -23,27 +22,62 @@ const emit = defineEmits<{
   (e: 'toggle-public', x: Row): void
 }>()
 
-// Gasto cuyo menú de tres puntos está abierto (undefined = ninguno).
-const menuFor = ref<Row | undefined>(undefined)
+// Id del gasto cuyo menú de tres puntos está abierto ('' = ninguno).
+const menuId = ref('')
+// Si no cabe por debajo del botón, el menú se abre hacia arriba.
+const menuUp = ref(false)
 
-function titleOf(x: Row) {
-  return x.description || props.categoryById[x.category_id]?.name || 'Gasto'
+const MENU_ALTO = 170 // altura aproximada del menú con sus tres opciones
+const NAV_ALTO = 64 // barra de navegación inferior
+
+function toggleMenu(x: Row, ev: MouseEvent) {
+  if (menuId.value === x.id) {
+    menuId.value = ''
+    return
+  }
+  const boton = (ev.currentTarget as HTMLElement).getBoundingClientRect()
+  menuUp.value = boton.bottom + MENU_ALTO > window.innerHeight - NAV_ALTO
+  menuId.value = x.id
+}
+
+function closeMenu() {
+  menuId.value = ''
 }
 
 function edit(x: Row) {
-  menuFor.value = undefined
+  closeMenu()
   emit('edit', x)
 }
 
 function remove(x: Row) {
-  menuFor.value = undefined
+  closeMenu()
   emit('delete', x)
 }
 
 function togglePublic(x: Row) {
-  menuFor.value = undefined
+  closeMenu()
   emit('toggle-public', x)
 }
+
+// El menú se cierra al tocar fuera de él o al pulsar Escape.
+function onPointerDown(ev: PointerEvent) {
+  if (!menuId.value) return
+  const target = ev.target as HTMLElement | null
+  if (!target?.closest('.actions')) closeMenu()
+}
+
+function onKeyDown(ev: KeyboardEvent) {
+  if (ev.key === 'Escape') closeMenu()
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onPointerDown)
+  document.addEventListener('keydown', onKeyDown)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onPointerDown)
+  document.removeEventListener('keydown', onKeyDown)
+})
 </script>
 
 <template>
@@ -74,25 +108,25 @@ function togglePublic(x: Row) {
       </div>
       <span class="amount">{{ formatEur(x.amount) }}</span>
       <div v-if="editable" class="actions">
-        <button type="button" class="icon dots" title="Opciones" aria-label="Opciones" @click="menuFor = x">
+        <button
+          type="button"
+          class="icon dots"
+          title="Opciones"
+          aria-label="Opciones"
+          aria-haspopup="menu"
+          :aria-expanded="menuId === x.id"
+          @click="toggleMenu(x, $event)"
+        >
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
         </button>
+        <div v-if="menuId === x.id" class="menu" :class="{ up: menuUp }" role="menu">
+          <button type="button" role="menuitem" @click="edit(x)">Editar</button>
+          <button v-if="privacyToggle" type="button" role="menuitem" @click="togglePublic(x)">
+            {{ x.is_public ? 'Hacer privado' : 'Hacer público' }}
+          </button>
+          <button type="button" role="menuitem" class="destructive" @click="remove(x)">Borrar</button>
+        </div>
       </div>
     </li>
   </ul>
-
-  <Sheet v-if="menuFor" :title="titleOf(menuFor)" @close="menuFor = undefined">
-    <div class="quick">
-      <button type="button" @click="edit(menuFor)">
-        <span>Editar gasto<small>Cambiar importe, fecha o categoría</small></span>
-      </button>
-      <button v-if="privacyToggle" type="button" @click="togglePublic(menuFor)">
-        <span v-if="menuFor.is_public">Hacer privado<small>Tu pareja dejará de verlo</small></span>
-        <span v-else>Hacer público<small>Tu pareja podrá verlo, solo lectura</small></span>
-      </button>
-      <button type="button" class="destructive" @click="remove(menuFor)">
-        <span>Borrar gasto<small>No se puede deshacer</small></span>
-      </button>
-    </div>
-  </Sheet>
 </template>
