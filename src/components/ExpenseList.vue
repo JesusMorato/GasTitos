@@ -74,7 +74,9 @@ function togglePublic(x: Row) {
       </div>
       <span class="amount">{{ formatEur(x.amount) }}</span>
       <div v-if="editable" class="actions">
-        <button type="button" class="icon dots" title="Opciones" aria-label="Opciones" @click="menuFor = x">⋯</button>
+        <button type="button" class="icon dots" title="Opciones" aria-label="Opciones" @click="menuFor = x">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+        </button>
       </div>
     </li>
   </ul>

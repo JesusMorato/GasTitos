@@ -209,7 +209,8 @@ button.danger { background: transparent; color: var(--neg); border-color: var(--
 button.small { padding: 0.35rem 0.7rem; font-size: 0.85rem; }
 button.icon { width: 36px; height: 36px; padding: 0; border-radius: 50%; background: transparent; border-color: transparent; color: var(--ink-2); font-size: 1rem; }
 button.icon:hover { background: var(--surface-2); }
-button.icon.dots { font-size: 1.4rem; line-height: 1; color: var(--ink-3); }
+button.icon.dots { color: var(--ink-3); }
+button.icon.dots svg { width: 22px; height: 22px; }
 button.block { width: 100%; }
 
 /* ---------- forms ---------- */
