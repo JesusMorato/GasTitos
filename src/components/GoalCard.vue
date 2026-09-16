@@ -48,7 +48,7 @@ const plan = computed(() => {
   if (months === 0) return { late: true, perMonth: remaining.value }
   return { late: false, perMonth: monthlyPlan(remaining.value, months) }
 })
-const projected = computed(() => (hasTarget.value && !done.value ? projectedMonth(remaining.value, props.contributions) : null))
+const projected = computed(() => (hasTarget.value && !done.value ? projectedMonth(remaining.value, props.contributions, undefined, props.goal.created_at.slice(0, 7)) : null))
 const onTrack = computed(() => {
   if (!projected.value || !props.goal.deadline) return null
   return projected.value <= props.goal.deadline.slice(0, 7)

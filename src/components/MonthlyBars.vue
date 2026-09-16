@@ -23,7 +23,9 @@ useChart(
     const t = chartTheme(el)
     const n = props.labels.length
     const totals = Array.from({ length: n }, (_, i) => round2(props.datasets.reduce((a, d) => a + (d.values[i] ?? 0), 0)))
-    const avg = n ? round2(totals.reduce((a, b) => a + b, 0) / n) : 0
+    // Media solo de los meses con datos: los meses vacíos (antes de usar la app) no cuentan.
+    const withData = totals.filter((v) => v > 0)
+    const avg = withData.length ? round2(withData.reduce((a, b) => a + b, 0) / withData.length) : 0
     const bars: ChartDataset<'bar' | 'line', number[]>[] = props.datasets.map((d) => {
       const color = d.color ?? t.accent
       return {

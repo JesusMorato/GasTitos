@@ -307,3 +307,13 @@ describe('huchas', () => {
     expect(projectedMonth(250, [], '2026-09-16')).toBeNull()
   })
 })
+
+describe('projectedMonth con hucha reciente', () => {
+  it('no cuenta los meses anteriores a la creación de la hucha', () => {
+    const moves = [{ contributed_on: '2026-09-05', amount: 100, direction: 'in' as const }]
+    // Sin sinceMonth: media de 3 meses = 33 €/mes → 300 € tardan 10 meses
+    expect(projectedMonth(300, moves, '2026-09-16')).toBe('2027-06')
+    // Con la hucha creada en septiembre: media = 100 €/mes → 3 meses
+    expect(projectedMonth(300, moves, '2026-09-16', '2026-09')).toBe('2026-12')
+  })
+})

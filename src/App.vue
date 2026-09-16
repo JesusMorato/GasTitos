@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useSession } from './composables/useSession'
 import { useData, type ExpenseInput } from './composables/useData'
 import { useEditor } from './composables/useEditor'
@@ -15,9 +15,13 @@ const { state, partner } = useSession()
 const data = useData()
 const editor = useEditor()
 const route = useRoute()
+const router = useRouter()
 const { month, shift, reset, isCurrent } = useMonth()
 
-const inApp = computed(() => !!state.user && !!state.household)
+const inApp = computed(() => !!state.user && !!state.household && !state.recovery)
+
+// Al llegar desde el email de recuperación, la app manda a "nueva contraseña".
+watch(() => state.recovery, (r) => { if (r) router.push({ name: 'new-password' }) })
 const showMonth = computed(() => inApp.value && (route.name === 'personal' || route.name === 'couple'))
 const navAccent = computed(() => (route.name === 'couple' ? 'var(--pareja)' : 'var(--yo)'))
 

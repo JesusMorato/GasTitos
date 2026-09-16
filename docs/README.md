@@ -15,6 +15,17 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-16 · v0.4.1 — recuperar contraseña, exportar CSV, medias sin meses vacíos.**
+
+- "¿Has olvidado la contraseña?" en la entrada: Supabase envía un enlace que vuelve a la
+  app y abre la pantalla "Nueva contraseña" (`views/NewPasswordView.vue`; el evento
+  `PASSWORD_RECOVERY` pone `state.recovery` en `useSession`). El enlace hay que abrirlo
+  en el mismo dispositivo desde el que se pidió.
+- Ajustes → Tus datos: dos botones que descargan CSV (separador `;`, coma decimal, BOM
+  para Excel): gastos + pagos entre vosotros, y huchas + movimientos (`lib/csv.ts`).
+- La línea de media de las barras de 6 meses solo promedia los meses con datos. La
+  proyección de una hucha solo cuenta los meses desde que existe.
+
 **2026-09-16 · v0.4 — gastos fijos, huchas simples, cuenta conjunta e identidad.**
 
 - Migración `0006_fijos_y_huchas.sql`: tablas `recurring_expenses` y `recurring_runs`,

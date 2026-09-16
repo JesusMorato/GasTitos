@@ -373,14 +373,17 @@ export function goalBalance(moves: Movement[]): number {
 
 /**
  * Mes en el que se llegaría al objetivo al ritmo medio de los últimos 3 meses.
+ * Solo cuentan los meses desde que existe la hucha (sinceMonth): los meses
+ * anteriores, vacíos por definición, no bajan la media.
  * Devuelve null si el ritmo es cero o negativo.
  */
-export function projectedMonth(remaining: number, moves: Movement[], today: string = todayIso()): string | null {
+export function projectedMonth(remaining: number, moves: Movement[], today: string = todayIso(), sinceMonth?: string): string | null {
   if (remaining <= 0) return monthOf(today)
   const cur = monthOf(today)
-  const last3 = lastMonths(cur, 3)
-  const net = netByMonth(moves, last3)
-  const rate = net.reduce((a, b) => a + b, 0) / 3
+  const window = lastMonths(cur, 3).filter((m) => !sinceMonth || m >= sinceMonth)
+  if (window.length === 0) return null
+  const net = netByMonth(moves, window)
+  const rate = net.reduce((a, b) => a + b, 0) / window.length
   if (rate <= 0) return null
   return addMonths(cur, Math.ceil(remaining / rate))
 }

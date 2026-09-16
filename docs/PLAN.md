@@ -385,4 +385,6 @@ del hogar de lo pagado con la cuenta conjunta (pendiente de confirmar).
 - Pestaña Juntos pasa a Huchas; lo que comparte la pareja, plegado en Repartidos. Hecho.
 - Logo: dirección B (hucha). Integrado como icono, favicon y marca.
 - Google oculto hasta configurarlo. Hecho.
-- Pendiente de decidir: ingresos (tasa de ahorro). Pendiente de hacer: exportar CSV, comentarios.
+- Pendiente de decidir: ingresos (tasa de ahorro). Pendiente de hacer: comentarios en gastos, ver todos los gastos / buscador, editar movimientos de hucha.
+- Media de las barras solo con meses con datos; proyección de hucha desde su creación. Hecho.
+- Recuperar contraseña y exportar CSV. Hecho.

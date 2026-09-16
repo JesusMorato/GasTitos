@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase, authRedirectUrl } from '../supabase'
+import { useSession } from '../composables/useSession'
 import Logo from '../components/Logo.vue'
 
 // Se activa cuando el login con Google esté configurado en Supabase
@@ -9,10 +10,30 @@ import Logo from '../components/Logo.vue'
 const GOOGLE_LOGIN = false
 
 const router = useRouter()
+const { requestPasswordReset } = useSession()
 const email = ref('')
 const password = ref('')
 const busy = ref(false)
 const error = ref<string | null>(null)
+const forgot = ref(false)
+const sent = ref(false)
+
+async function sendReset() {
+  error.value = null
+  if (!email.value.trim()) {
+    error.value = 'Escribe tu email arriba y vuelve a pulsar.'
+    return
+  }
+  busy.value = true
+  try {
+    await requestPasswordReset(email.value)
+    sent.value = true
+  } catch (e) {
+    error.value = translate((e as Error).message)
+  } finally {
+    busy.value = false
+  }
+}
 
 function translate(msg: string): string {
   if (/invalid login credentials/i.test(msg)) return 'Email o contraseña incorrectos.'
@@ -65,6 +86,15 @@ async function loginGoogle() {
       <p v-if="error" class="error">{{ error }}</p>
       <button type="submit" class="block" :disabled="busy">Entrar</button>
     </form>
+
+    <div style="margin-top: 0.8rem; text-align: center">
+      <button v-if="!forgot" type="button" class="ghost small" @click="forgot = true">¿Has olvidado la contraseña?</button>
+      <template v-else-if="!sent">
+        <p class="tiny" style="margin-bottom: 0.4rem">Te enviamos un enlace al email de arriba. Ábrelo en este mismo dispositivo.</p>
+        <button type="button" class="secondary small" :disabled="busy" @click="sendReset">Enviar enlace</button>
+      </template>
+      <p v-else class="ok">Enlace enviado. Revisa el correo (y la carpeta de spam).</p>
+    </div>
 
     <template v-if="GOOGLE_LOGIN">
       <div class="row" style="margin: 1rem 0; justify-content: center"><span class="tiny">o</span></div>

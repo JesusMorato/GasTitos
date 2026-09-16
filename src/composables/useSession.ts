@@ -2,7 +2,7 @@
 // Es un "composable" sencillo con reactive(); no hace falta Pinia para dos usuarios.
 import { computed, reactive, readonly } from 'vue'
 import type { Session, User } from '@supabase/supabase-js'
-import { supabase } from '../supabase'
+import { supabase, authRedirectUrl } from '../supabase'
 import type { Household, Member } from '../types'
 
 interface State {
@@ -11,6 +11,8 @@ interface State {
   household: Household | null
   members: Member[]
   error: string | null
+  /** true mientras el usuario viene del enlace de "olvidé mi contraseña" */
+  recovery: boolean
 }
 
 const state = reactive<State>({
@@ -19,6 +21,7 @@ const state = reactive<State>({
   household: null,
   members: [],
   error: null,
+  recovery: false,
 })
 
 let initialised = false
@@ -57,8 +60,9 @@ export function useSession() {
   if (!initialised) {
     initialised = true
     supabase.auth.getSession().then(({ data }) => applySession(data.session))
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       // No hacemos await aquí: Supabase recomienda no bloquear este callback.
+      if (event === 'PASSWORD_RECOVERY') state.recovery = true
       applySession(session)
     })
   }
@@ -101,7 +105,19 @@ export function useSession() {
     await loadHousehold()
   }
 
+  /** Envía el email de "olvidé mi contraseña". El enlace vuelve a la app. */
+  async function requestPasswordReset(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: authRedirectUrl })
+    if (error) throw new Error(error.message)
+  }
+
+  function endRecovery() {
+    state.recovery = false
+  }
+
   return {
+    requestPasswordReset,
+    endRecovery,
     state: readonly(state),
     me,
     partner,

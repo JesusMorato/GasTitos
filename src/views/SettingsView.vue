@@ -4,7 +4,8 @@ import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData, type RecurringInput } from '../composables/useData'
 import type { Category, RecurringExpense } from '../types'
-import { formatEur } from '../lib/money'
+import { formatEur, todayIso } from '../lib/money'
+import { downloadText, toCsv } from '../lib/csv'
 import CategoryIcon from '../components/CategoryIcon.vue'
 import Sheet from '../components/Sheet.vue'
 import EmojiPicker from '../components/EmojiPicker.vue'
@@ -118,6 +119,42 @@ function moveCat(c: Category, dir: -1 | 1) {
 async function logout() {
   await signOut()
   router.push({ name: 'login' })
+}
+
+// --- exportar ---
+function kindOfExpense(e: { is_shared: boolean; funding: string }) {
+  return !e.is_shared ? 'personal' : e.funding === 'pot' ? 'conjunta' : 'repartido'
+}
+function exportExpenses() {
+  const uid = state.user!.id
+  const rows: unknown[][] = [['Fecha', 'Tipo', 'Categoría', 'Nota', 'Importe', 'Pagado por', 'Mi parte', 'Parte de mi pareja', 'Público', 'Gasto fijo']]
+  for (const e of [...data.expensesWithShares.value].sort((a, b) => (a.spent_on < b.spent_on ? -1 : 1))) {
+    const mine = e.shares.find((s) => s.user_id === uid)?.amount ?? null
+    const theirs = e.shares.find((s) => s.user_id !== uid)?.amount ?? null
+    rows.push([
+      e.spent_on, kindOfExpense(e), data.categoryById.value[e.category_id]?.name ?? '', e.description ?? '', e.amount,
+      e.funding === 'pot' ? 'cuenta conjunta' : nameOf(e.user_id), mine, theirs, e.is_public ? 'sí' : 'no', e.recurring_id ? 'sí' : 'no',
+    ])
+  }
+  rows.push([])
+  rows.push(['Pagos entre vosotros'])
+  rows.push(['Fecha', 'De', 'A', 'Importe', 'Nota'])
+  for (const s of [...data.settlements.value].sort((a, b) => (a.settled_on < b.settled_on ? -1 : 1))) {
+    rows.push([s.settled_on, nameOf(s.from_user), nameOf(s.to_user), s.amount, s.note ?? ''])
+  }
+  downloadText(`gastitos-gastos-${todayIso()}.csv`, toCsv(rows))
+}
+function exportGoals() {
+  const rows: unknown[][] = [['Hucha', 'Tipo', 'Objetivo', 'Fecha límite', 'Ahorrado', 'Fecha', 'Quién', 'Movimiento', 'Importe', 'Nota']]
+  for (const g of data.goals.value) {
+    const moves = data.contributions.value.filter((c) => c.goal_id === g.id).sort((a, b) => (a.contributed_on < b.contributed_on ? -1 : 1))
+    const saved = data.savedByGoal.value[g.id] ?? 0
+    if (moves.length === 0) rows.push([g.name, g.is_shared ? 'pareja' : 'personal', g.target_amount, g.deadline ?? '', saved, '', '', '', '', ''])
+    for (const c of moves) {
+      rows.push([g.name, g.is_shared ? 'pareja' : 'personal', g.target_amount, g.deadline ?? '', saved, c.contributed_on, nameOf(c.user_id), c.direction === 'out' ? 'sacar' : 'meter', c.amount, c.note ?? ''])
+    }
+  }
+  downloadText(`gastitos-huchas-${todayIso()}.csv`, toCsv(rows))
 }
 </script>
 
@@ -236,6 +273,15 @@ async function logout() {
           </div>
         </li>
       </ul>
+    </div>
+
+    <div class="card">
+      <h2>Tus datos</h2>
+      <p class="tiny" style="margin: 0.3rem 0 0.6rem">Descarga una copia en CSV (se abre en Excel). Incluye lo que tú puedes ver: lo tuyo, lo repartido y la cuenta conjunta.</p>
+      <div class="row">
+        <button type="button" class="secondary small" @click="exportExpenses"><UiIcon name="arrowIn" :size="16" /> Gastos y pagos</button>
+        <button type="button" class="secondary small" @click="exportGoals"><UiIcon name="arrowIn" :size="16" /> Huchas y movimientos</button>
+      </div>
     </div>
 
     <div class="card flat">
