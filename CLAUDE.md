@@ -88,3 +88,16 @@ colores se leen de las variables CSS del propio `<canvas>` (`chartTheme(el)`), a
 gráficas respetan `.space-yo` / `.space-pareja` y el modo oscuro. Chart.js necesita
 colores en hex, no `var()`: convierte con `withAlpha` o lee la variable resuelta.
 Componentes: `DonutChart`, `MonthlyBars`, `BudgetChart` (dentro de `BudgetCard`).
+
+## Iconos e ilustraciones (regla de estilo, 2026-09-16)
+
+- **Nada de emojis en la interfaz de la app**: ni en botones (ajustes, añadir, menú),
+  ni en los tipos de gasto del menú ➕, ni en listas (pagos, huchas por defecto), ni en
+  la pantalla de entrada. Se dibujan como SVG de trazo 2 px, esquinas redondas, rejilla
+  24, igual que el juego de iconos de categoría de `src/lib/icons.ts`.
+- Las **ilustraciones grandes** (pantallas vacías, entrada) siguen el estilo plano sin
+  trazo de `components/EmptyState.vue`: la hucha, la planta, las dos personas.
+- Los emojis solo aparecen donde **el usuario los elige**: categorías (si prefiere emoji
+  al icono propio) y huchas. El selector de emoji se mantiene para eso.
+- La palabra "bote" no se usa en la interfaz: es **"cuenta conjunta"** (pestaña
+  "Conjunta"). En el código sigue siendo `pot`.

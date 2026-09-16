@@ -361,3 +361,18 @@ adelanta. Se hace como "fase 3b" justo después del donut y las barras de 6 mese
 Referencias: [Copilot](https://moneywithkatie.com/copilot-review-a-budgeting-app-that-finally-gets-it-right/),
 [Toshl budgets](https://toshl.com/blog/how-to-use-the-budgets-web-app/),
 [Monzo Targets](https://monzo.com/blog/targets-in-trends).
+
+### 8.2 Estilo de iconos (2026-09-16)
+
+Al dueño le gustan las ilustraciones planas (hucha, planta, personas) y NO los emojis
+"tipo teléfono" en la interfaz: engranaje de ajustes, iconos de los tipos de gasto en el
+menú ➕, pagos entre vosotros, etc. Regla: toda la interfaz con iconos SVG de trazo en el
+mismo estilo que las categorías; ilustraciones planas para lo grande; emojis solo donde
+el usuario los elige (categorías y huchas). Pendiente de aplicar: ver lista de iconos a
+sustituir en `CLAUDE.md`.
+
+### 8.3 "Bote" pasa a llamarse "cuenta conjunta" (2026-09-16)
+
+Sí tienen cuenta conjunta. En la interfaz: pestaña "Conjunta", "Gasto de la cuenta
+conjunta", "Límite de la cuenta conjunta". Además, "Mi mes" debe incluir el porcentaje
+del hogar de lo pagado con la cuenta conjunta (pendiente de confirmar).
