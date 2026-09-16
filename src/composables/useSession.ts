@@ -26,34 +26,50 @@ const state = reactive<State>({
 
 let initialised = false
 
-async function loadHousehold() {
-  if (!state.user) {
-    state.household = null
-    state.members = []
-    return
-  }
-  const { data: members, error } = await supabase
+/** Carga hogar y miembros del usuario dado, sin tocar el estado hasta tener todo. */
+async function fetchHousehold(user: User | null): Promise<{ household: Household | null; members: Member[] }> {
+  if (!user) return { household: null, members: [] }
+  const { data: rows, error } = await supabase
     .from('household_members')
     .select('*')
     .order('joined_at', { ascending: true })
   if (error) {
     state.error = error.message
-    return
+    return { household: null, members: [] }
   }
-  state.members = (members ?? []).map((m) => ({ ...m, share_pct: Number(m.share_pct ?? 50) })) as Member[]
-  const mine = state.members.find((m) => m.user_id === state.user?.id)
-  if (!mine) {
-    state.household = null
-    return
-  }
+  const members = (rows ?? []).map((m) => ({ ...m, share_pct: Number(m.share_pct ?? 50) })) as Member[]
+  const mine = members.find((m) => m.user_id === user.id)
+  if (!mine) return { household: null, members }
   const { data: h } = await supabase.from('households').select('*').eq('id', mine.household_id).single()
-  state.household = (h as Household) ?? null
+  return { household: (h as Household) ?? null, members }
 }
 
-async function applySession(session: Session | null) {
-  state.user = session?.user ?? null
-  await loadHousehold()
-  state.ready = true
+async function loadHousehold() {
+  const r = await fetchHousehold(state.user)
+  state.household = r.household
+  state.members = r.members
+}
+
+// Usuario y hogar se asignan a la vez, ya cargados: así el router nunca ve
+// "hay usuario pero aún no sé si tiene hogar" y no manda a "Casi listo" por error.
+let syncing: Promise<void> | null = null
+function applySession(session: Session | null): Promise<void> {
+  const p = (async () => {
+    const user = session?.user ?? null
+    const r = await fetchHousehold(user)
+    state.user = user
+    state.household = r.household
+    state.members = r.members
+    state.ready = true
+  })()
+  syncing = p
+  p.finally(() => { if (syncing === p) syncing = null })
+  return p
+}
+
+/** Espera a que termine la sincronización de sesión en curso (si la hay). */
+export function whenSessionSettled(): Promise<void> {
+  return syncing ?? Promise.resolve()
 }
 
 export function useSession() {

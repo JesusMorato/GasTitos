@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { useSession } from '../composables/useSession'
@@ -7,6 +7,9 @@ import SegmentedControl from '../components/SegmentedControl.vue'
 
 const router = useRouter()
 const { state, refresh } = useSession()
+
+// Si el hogar aparece mientras estamos aquí (carga tardía), salimos solos.
+watch(() => state.household, (h) => { if (h) router.replace({ name: 'personal' }) }, { immediate: true })
 
 type Mode = 'create' | 'join'
 const mode = ref<Mode>('create')

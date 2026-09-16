@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { useSession } from './composables/useSession'
+import { useSession, whenSessionSettled } from './composables/useSession'
 import LoginView from './views/LoginView.vue'
 import OnboardingView from './views/OnboardingView.vue'
 import CoupleView from './views/CoupleView.vue'
@@ -38,6 +38,8 @@ function waitReady(): Promise<void> {
 
 router.beforeEach(async (to) => {
   await waitReady()
+  // Tras un login, espera a que el hogar esté cargado antes de decidir la ruta.
+  await whenSessionSettled()
   const { state } = useSession()
 
   if (to.meta.public) {

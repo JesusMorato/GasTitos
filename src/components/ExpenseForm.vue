@@ -141,10 +141,11 @@ function submit() {
 </script>
 
 <template>
-  <Sheet :title="initial ? 'Editar gasto' : 'Nuevo gasto'" @close="emit('close')">
+  <Sheet :title="initial ? 'Editar gasto' : kind === 'personal' ? 'Gasto personal' : kind === 'shared' ? 'Gasto repartido' : 'Gasto de la cuenta conjunta'" @close="emit('close')">
     <form @submit.prevent="submit">
       <div class="field">
-        <SegmentedControl v-model="kind" :options="kindOptions" />
+        <!-- Al crear, el tipo ya se eligió en el menú ➕; solo se puede cambiar al editar. -->
+        <SegmentedControl v-if="initial" v-model="kind" :options="kindOptions" />
         <p class="help">
           <template v-if="kind === 'personal'">Solo tuyo. Privado salvo que lo hagas público.</template>
           <template v-else-if="kind === 'shared'">Lo paga uno con su dinero y se reparte.</template>

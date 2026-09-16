@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase, authRedirectUrl } from '../supabase'
-import { useSession } from '../composables/useSession'
+import { useSession, whenSessionSettled } from '../composables/useSession'
 import Logo from '../components/Logo.vue'
 
 // Se activa cuando el login con Google esté configurado en Supabase
@@ -51,6 +51,7 @@ async function loginEmail() {
     error.value = translate(e.message)
     return
   }
+  await whenSessionSettled()
   router.push({ name: 'personal' })
 }
 
