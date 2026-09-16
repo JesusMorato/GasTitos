@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useSession } from '../composables/useSession'
 import { useData, type GoalInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
-import { computeBalance, formatEur, monthOf, paidByMember, sum, todayIso, totalsBy } from '../lib/money'
+import { computeBalance, formatEur, lastMonths, monthOf, paidByMember, shortMonth, sum, todayIso, totalsBy, totalsByMonth } from '../lib/money'
 import type { Contribution, SavingsGoal, Settlement } from '../types'
 import { formatDate } from '../lib/money'
 import SegmentedControl from '../components/SegmentedControl.vue'
@@ -15,6 +15,9 @@ import EmptyState from '../components/EmptyState.vue'
 import SettleForm from '../components/SettleForm.vue'
 import GoalForm from '../components/GoalForm.vue'
 import GoalCard from '../components/GoalCard.vue'
+import DonutChart from '../components/DonutChart.vue'
+import MonthlyBars from '../components/MonthlyBars.vue'
+import BudgetCard from '../components/BudgetCard.vue'
 
 type Tab = 'split' | 'pot' | 'together'
 
@@ -47,10 +50,41 @@ const balance = computed(() => computeBalance(splitAll.value, data.settlements.v
 const paidMonth = computed(() => paidByMember(splitMonth.value, memberIds.value))
 const splitMonthTotal = computed(() => sum(splitMonth.value.map((e) => e.amount)))
 
+// Últimos 6 meses (comparten selector de mes con el resto de la pestaña)
+const months6 = computed(() => lastMonths(month.value, 6))
+const labels6 = computed(() => months6.value.map(shortMonth))
+const memberColors = ['var(--pareja)', 'var(--yo)']
+const paidBars = computed(() =>
+  state.members.map((m, i) => ({
+    label: m.display_name,
+    values: totalsByMonth(splitAll.value.filter((e) => e.user_id === m.user_id), months6.value),
+    color: memberColorHex(i),
+  })),
+)
+function memberColorHex(i: number): string {
+  // Los charts necesitan hex, no var(): leemos el color resuelto del documento.
+  const name = memberColors[i] ?? 'var(--accent)'
+  const v = name.match(/var\((--[\w-]+)\)/)?.[1]
+  return v ? getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#5b4f8f' : name
+}
+
 // --- Bote ---
-const potMonth = computed(() => rows.value.filter((e) => e.is_shared && e.funding === 'pot' && monthOf(e.spent_on) === month.value))
+const potAll = computed(() => rows.value.filter((e) => e.is_shared && e.funding === 'pot'))
+const potMonth = computed(() => potAll.value.filter((e) => monthOf(e.spent_on) === month.value))
 const potTotal = computed(() => sum(potMonth.value.map((e) => e.amount)))
-const potByCategory = computed(() => totalsBy(potMonth.value, (e) => e.category_id, (e) => e.amount).slice(0, 6))
+const potByCategory = computed(() => totalsBy(potMonth.value, (e) => e.category_id, (e) => e.amount))
+const potDonut = computed(() =>
+  potByCategory.value.map((c) => ({
+    label: data.categoryById.value[c.key]?.name ?? 'Otros',
+    value: c.total,
+    color: data.categoryById.value[c.key]?.color ?? '#7a857f',
+  })),
+)
+const potBars = computed(() => [{ label: 'Bote', values: totalsByMonth(potAll.value, months6.value) }])
+const potLimit = computed(() => data.potBudget.value?.monthly_limit ?? null)
+function setPotLimit(v: number | null) {
+  run(() => data.setBudget('pot', v))
+}
 
 // --- Juntos ---
 const sharedGoals = computed(() => data.goals.value.filter((g) => g.is_shared))
@@ -135,6 +169,16 @@ function deleteContribution(c: Contribution) {
         </div>
       </div>
 
+      <div v-if="partner" class="card">
+        <div class="row between" style="margin-bottom: 0.4rem">
+          <h2>Quién ha pagado, últimos 6 meses</h2>
+        </div>
+        <MonthlyBars :labels="labels6" :datasets="paidBars" :highlight="5" />
+        <div class="row tiny" style="gap: 1rem; margin-top: 0.4rem">
+          <span v-for="(m, i) in state.members" :key="m.user_id"><span class="dot-legend" :style="{ background: memberColors[i] }" /> {{ m.display_name }}</span>
+        </div>
+      </div>
+
       <div class="card">
         <div class="section-title" style="margin-top: 0">
           <h2>Gastos repartidos</h2>
@@ -182,16 +226,26 @@ function deleteContribution(c: Contribution) {
 
       <div class="card">
         <MonthPicker v-model="month" />
-        <div v-if="potByCategory.length" class="bars">
-          <div v-for="c in potByCategory" :key="c.key" class="bar-row" :style="{ '--bar': data.categoryById.value[c.key]?.color }">
-            <div>
-              <span><CategoryIcon variant="inline" :icon="data.categoryById.value[c.key]?.icon" :emoji="data.categoryById.value[c.key]?.emoji" :color="data.categoryById.value[c.key]?.color" />{{ data.categoryById.value[c.key]?.name }}</span>
-              <div class="progress"><div :style="{ width: (potTotal ? (c.total / potTotal) * 100 : 0) + '%' }" /></div>
-            </div>
-            <span class="amount tnum" style="font-weight: 600">{{ formatEur(c.total) }}</span>
-          </div>
-        </div>
+        <template v-if="potByCategory.length">
+          <DonutChart :items="potDonut" :total="potTotal" caption="del bote" />
+          <ul class="donut-legend">
+            <li v-for="c in potByCategory" :key="c.key" :style="{ '--dot': data.categoryById.value[c.key]?.color }">
+              <span class="dot" />
+              <span class="name"><CategoryIcon variant="inline" :icon="data.categoryById.value[c.key]?.icon" :emoji="data.categoryById.value[c.key]?.emoji" :color="data.categoryById.value[c.key]?.color" />{{ data.categoryById.value[c.key]?.name }}</span>
+              <span class="val">{{ formatEur(c.total) }}</span>
+            </li>
+          </ul>
+        </template>
         <div v-else class="empty">Nada pagado con el bote este mes.</div>
+      </div>
+
+      <BudgetCard :items="potMonth" :month="month" :limit="potLimit" title="Límite del bote" empty-hint="Ponle un límite mensual a la cuenta conjunta y veréis cómo os acercáis a él." @set-limit="setPotLimit" />
+
+      <div class="card">
+        <div class="row between" style="margin-bottom: 0.4rem">
+          <h2>Bote, últimos 6 meses</h2>
+        </div>
+        <MonthlyBars :labels="labels6" :datasets="potBars" average :highlight="5" />
       </div>
 
       <div class="card">

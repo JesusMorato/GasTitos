@@ -79,3 +79,12 @@ pareja, solo lectura).
 
 Al terminar una sesión con cambios relevantes, actualiza `docs/README.md`
 (sección "Estado" y "Pendiente").
+
+## Gráficas
+
+Chart.js registrado en `src/lib/charts.ts` (solo los módulos que usamos) y montado con
+`composables/useChart.ts`, que reconstruye la gráfica al cambiar datos o tema. Los
+colores se leen de las variables CSS del propio `<canvas>` (`chartTheme(el)`), así las
+gráficas respetan `.space-yo` / `.space-pareja` y el modo oscuro. Chart.js necesita
+colores en hex, no `var()`: convierte con `withAlpha` o lee la variable resuelta.
+Componentes: `DonutChart`, `MonthlyBars`, `BudgetChart` (dentro de `BudgetCard`).

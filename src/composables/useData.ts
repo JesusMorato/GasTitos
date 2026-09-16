@@ -2,7 +2,7 @@
 // Supabase ya filtra por RLS: solo llegan las filas que el usuario puede ver.
 import { computed, ref } from 'vue'
 import { supabase } from '../supabase'
-import type { Category, Contribution, Expense, ExpenseShare, SavingsGoal, Settlement, SplitMode, Funding } from '../types'
+import type { Budget, BudgetScope, Category, Contribution, Expense, ExpenseShare, SavingsGoal, Settlement, SplitMode, Funding } from '../types'
 import { round2, type Share } from '../lib/money'
 
 const expenses = ref<Expense[]>([])
@@ -11,6 +11,7 @@ const categories = ref<Category[]>([])
 const settlements = ref<Settlement[]>([])
 const goals = ref<SavingsGoal[]>([])
 const contributions = ref<Contribution[]>([])
+const budgets = ref<Budget[]>([])
 const loading = ref(false)
 const loaded = ref(false)
 const error = ref<string | null>(null)
@@ -33,15 +34,17 @@ async function loadAll() {
   loading.value = true
   error.value = null
   try {
-    const [e, s, c, st, g, gc] = await Promise.all([
+    const [e, s, c, st, g, gc, b] = await Promise.all([
       supabase.from('expenses').select('*').order('spent_on', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('expense_shares').select('*'),
       supabase.from('categories').select('*').order('sort_order', { ascending: true }).order('name', { ascending: true }),
       supabase.from('settlements').select('*').order('settled_on', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('savings_goals').select('*').order('created_at', { ascending: true }),
       supabase.from('goal_contributions').select('*').order('contributed_on', { ascending: false }),
+      supabase.from('budgets').select('*'),
     ])
-    fail(e.error); fail(s.error); fail(c.error); fail(st.error); fail(g.error); fail(gc.error)
+    fail(e.error); fail(s.error); fail(c.error); fail(st.error); fail(g.error); fail(gc.error); fail(b.error)
+    budgets.value = (b.data ?? []).map((r) => num(r, ['monthly_limit'])) as Budget[]
     expenses.value = (e.data ?? []).map((r) => num(r, ['amount'])) as Expense[]
     shares.value = (s.data ?? []).map((r) => num(r, ['amount'])) as ExpenseShare[]
     categories.value = (c.data ?? []) as Category[]
@@ -193,9 +196,23 @@ export function useData() {
     await loadAll()
   }
 
+  // ---- límites mensuales -------------------------------------
+  const potBudget = computed<Budget | null>(() => budgets.value.find((b) => b.scope === 'pot') ?? null)
+
+  function myBudget(userId: string): Budget | null {
+    return budgets.value.find((b) => b.scope === 'personal' && b.user_id === userId) ?? null
+  }
+
+  /** Crea, cambia o quita (null) el límite mensual de un ámbito. */
+  async function setBudget(scope: BudgetScope, limit: number | null) {
+    const { error: e } = await supabase.rpc('set_budget', { p_scope: scope, p_limit: limit })
+    fail(e)
+    await loadAll()
+  }
+
   return {
-    expenses, shares, categories, settlements, goals, contributions, loading, loaded, error,
-    savedByGoal, sharesByExpense, categoryById, expensesWithShares,
+    expenses, shares, categories, settlements, goals, contributions, budgets, loading, loaded, error,
+    savedByGoal, sharesByExpense, categoryById, expensesWithShares, potBudget, myBudget, setBudget,
     loadAll, ensureLoaded,
     saveExpense, setExpensePublic, deleteExpense,
     addCategory, updateCategory, deleteCategory,

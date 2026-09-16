@@ -117,3 +117,21 @@ Con dos personas es un solo número con signo. Cálculo en `src/lib/money.ts` (`
 Única forma de crear/editar gastos desde la app. Recibe el gasto y sus partes y lo guarda
 todo en una transacción. Comprueba: hogar, categoría, pagador miembro, partes de miembros
 y suma exacta.
+
+## Añadido en 0005 (fase 3: límites mensuales)
+
+### budgets — límite de gasto al mes
+| columna | notas |
+|---|---|
+| scope | `personal` (uno por usuario, privado) o `pot` (uno por hogar, común) |
+| user_id | dueño si es personal; null si es del bote |
+| monthly_limit | > 0 |
+
+Único por (hogar, ámbito, usuario). Se lee con RLS (el del bote lo ven los dos, el
+personal solo su dueño) y se escribe solo con `set_budget(p_scope, p_limit)`:
+crea o actualiza; con `p_limit` null o 0 lo borra.
+
+El límite personal se compara con "lo mío": gastos personales + mi parte de los
+repartidos. El del bote, con los gastos pagados con la cuenta conjunta.
+Cálculos en `src/lib/money.ts` (`cumulativeByDay`, `budgetStatus`, `dayCursor`),
+testeados.

@@ -97,3 +97,14 @@ export const EMOJI_SUGGESTIONS = [
   '📱', '💻', '📺', '🔌', '💡', '🧾', '🐶', '🐱', '👶', '🎓', '💍', '🛋️',
   '🛠️', '🌱', '🎯', '🛟', '💰', '🏦', '🚀', '🏡', '🚙', '🎄', '⛷️', '🏕️',
 ] as const
+
+export type BudgetScope = 'personal' | 'pot'
+
+/** Límite de gasto mensual: uno personal por usuario y uno opcional para el bote. */
+export interface Budget {
+  id: string
+  household_id: string
+  user_id: string | null
+  scope: BudgetScope
+  monthly_limit: number
+}

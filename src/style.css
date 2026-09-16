@@ -334,3 +334,21 @@ body.sheet-open { position: fixed; left: 0; right: 0; overflow: hidden; }
 hr.sep { border: 0; border-top: 1px solid var(--line); margin: 0.9rem 0; }
 .code-invite { font-family: var(--font-display); font-size: 1.8rem; letter-spacing: 0.18em; font-weight: 700; }
 .auth-card { max-width: 420px; margin: 8vh auto 0; }
+
+/* ---------- gráficas ---------- */
+.chart-box { position: relative; width: 100%; }
+.chart-box canvas { max-width: 100%; }
+.legend-line {
+  display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 0.25rem;
+  border-top: 2px dashed var(--c, var(--ink-3));
+  border-image: repeating-linear-gradient(90deg, var(--c, var(--ink-3)) 0 var(--dash-a, 7px), transparent var(--dash-a, 7px) var(--dash-b, 12px)) 1;
+}
+.legend-line[style*='--dash: 0'] { border-top-style: solid; border-image: none; }
+.legend-line[style*='--dash: 2px'] { --dash-a: 2px; --dash-b: 6px; }
+.donut-legend { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 0.8rem; font-size: 0.88rem; }
+.donut-legend li { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.donut-legend .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--dot); }
+.donut-legend .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.donut-legend .val { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+@media (max-width: 380px) { .donut-legend { grid-template-columns: 1fr; } }
+.dot-legend { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 0.2rem; }

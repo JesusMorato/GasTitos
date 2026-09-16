@@ -15,6 +15,20 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-16 · v0.3 — fase 3: gráficas y límite mensual.**
+
+- Migración `0005_presupuestos.sql`: tabla `budgets` y función `set_budget()`.
+- Entra Chart.js (`src/lib/charts.ts`, `composables/useChart.ts`). Tres componentes:
+  `DonutChart` (por categoría, total en el centro), `MonthlyBars` (últimos 6 meses,
+  apiladas por persona o con línea de media) y `BudgetChart` (acumulado día a día,
+  límite en rojo discontinuo, diagonal de ritmo, tramo y área rojos al pasarse).
+- `BudgetCard`: "llevas X de Y", estado por ritmo (vas bien / ojo / superado),
+  "te quedan X € para Y días · Z €/día", y el gráfico. Permite poner, cambiar y
+  quitar el límite desde la propia tarjeta.
+- Yo: donut con leyenda, límite personal, barras de 6 meses. Pareja → Repartidos:
+  barras apiladas de quién ha pagado; Pareja → Bote: donut, límite del bote y barras.
+- Ajustes: sección "Límites mensuales" (personal y bote).
+
 **2026-09-15 · iconos y paleta del lienzo de diseño.**
 Las categorías ya no se muestran con emoji sino con el juego de 10 iconos "estilo
 GasTitos" del lienzo *Logo GasTitos* (trazo de 2 px), cada uno con su color de la

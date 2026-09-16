@@ -25,6 +25,18 @@ watch(me, (m) => {
 })
 const partnerPct = computed(() => 100 - Number(myPct.value || 0))
 
+// --- límites mensuales ---
+const myLimit = ref<number>(0)
+const potLimit = ref<number>(0)
+watch(
+  () => [data.budgets.value, state.user?.id] as const,
+  ([, uid]) => {
+    myLimit.value = uid ? (data.myBudget(uid)?.monthly_limit ?? 0) : 0
+    potLimit.value = data.potBudget.value?.monthly_limit ?? 0
+  },
+  { immediate: true, deep: true },
+)
+
 const msg = ref<string | null>(null)
 const err = ref<string | null>(null)
 
@@ -130,6 +142,28 @@ async function logout() {
         </div>
         <p class="help">Es el reparto que se propone al apuntar un gasto repartido. Cada gasto puede cambiarlo.</p>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Límites mensuales</h2>
+      <p class="tiny" style="margin: 0.3rem 0 0.6rem">Orientativos: no bloquean nada, solo avisan cuando vas rápido o te pasas. Se ven en "Mi mes" y en Pareja → Bote.</p>
+      <div class="grid2">
+        <div class="field">
+          <label for="mylimit">Mi límite (personal + mi parte)</label>
+          <div class="row">
+            <input id="mylimit" v-model.number="myLimit" type="number" min="0" step="1" inputmode="decimal" placeholder="Sin límite" class="grow" />
+            <button type="button" class="small" :disabled="(myLimit || null) === (data.myBudget(state.user!.id)?.monthly_limit ?? null)" @click="run(() => data.setBudget('personal', myLimit > 0 ? myLimit : null), 'Límite guardado')">Guardar</button>
+          </div>
+        </div>
+        <div class="field space-pareja">
+          <label for="potlimit">Límite del bote (común)</label>
+          <div class="row">
+            <input id="potlimit" v-model.number="potLimit" type="number" min="0" step="1" inputmode="decimal" placeholder="Sin límite" class="grow" />
+            <button type="button" class="small" :disabled="(potLimit || null) === (data.potBudget.value?.monthly_limit ?? null)" @click="run(() => data.setBudget('pot', potLimit > 0 ? potLimit : null), 'Límite del bote guardado')">Guardar</button>
+          </div>
+        </div>
+      </div>
+      <p class="help">Deja el campo a 0 o vacío y guarda para quitar un límite.</p>
     </div>
 
     <div class="card">

@@ -264,7 +264,7 @@ una: tests en verde, build correcto, push, documentación actualizada.
 | **0. Prueba de humo** | Las dos cuentas entran, se unen, apuntan gastos, candado funciona. Arreglar lo que salga. | S | Lista de bugs cerrada. |
 | **1. Reparto real** ✅ 2026-09-15 | Porcentaje del hogar en Ajustes. Modos de reparto por gasto. `expense_shares`. Balance con signo. Botón Saldar + historial. | M | "Ana debe X a Luis" es correcto con repartos mixtos y se pone a cero al saldar. |
 | **2. Bote común** | Aportaciones, gastos del bote, saldo, esperado mensual por persona, donut del bote. | M | El saldo cuadra con aportaciones − gastos. |
-| **3. Mi mes real** | Yo → Resumen con el agregado (personal + mi parte + al bote). Donut y barras 6 meses. Chart.js. | M | La cifra del mes coincide con lo que sale de mi cuenta. |
+| **3. Mi mes real** ✅ 2026-09-16 | Yo → Resumen con el agregado (personal + mi parte + al bote). Donut y barras 6 meses. Chart.js. | M | La cifra del mes coincide con lo que sale de mi cuenta. |
 | **4. Ahorro v2** ⭐ | Huchas con emoji, tipos YNAB, plan mensual, proyección, sacar dinero, "este mes te toca X", gráfica real vs plan, barras 12 meses. | L | Un objetivo con fecha muestra plan y proyección correctos. |
 | **5. Recurrentes** | Reglas mensuales para gastos fijos, aportaciones al bote y a huchas. Ejecución al abrir la app. | M | El alquiler aparece solo el día 1. |
 | **6. Objetivos en pareja v2** | Barras por persona, plan repartido, estado por persona. | S | Se ve quién va por debajo del plan. |
@@ -313,7 +313,7 @@ Con las respuestas a 1 y 2 puedo empezar la fase 1 en la siguiente sesión.
 
 ## 8. Especificaciones añadidas después del plan
 
-### 8.1 Límite de gasto mensual con gráfico de acumulado (pedido el 2026-09-15)
+### 8.1 Límite de gasto mensual con gráfico de acumulado ✅ hecho el 2026-09-16 (pedido el 2026-09-15)
 
 **Qué es.** Un límite de gasto al mes (personal en Yo; opcionalmente otro para el bote
 en Pareja) y un gráfico que enseña cómo te acercas a él a lo largo del mes.

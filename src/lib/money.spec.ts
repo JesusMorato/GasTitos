@@ -196,3 +196,73 @@ describe('fechas', () => {
     expect(monthOf('2026-09-15')).toBe('2026-09')
   })
 })
+
+import { budgetStatus, cumulativeByDay, dayCursor, daysInMonth, lastMonths, totalsByMonth } from './money'
+
+describe('meses', () => {
+  it('días del mes, con febrero bisiesto', () => {
+    expect(daysInMonth('2026-09')).toBe(30)
+    expect(daysInMonth('2028-02')).toBe(29)
+    expect(daysInMonth('2026-02')).toBe(28)
+  })
+  it('últimos 6 meses cruzando el año', () => {
+    expect(lastMonths('2026-02', 6)).toEqual(['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02'])
+  })
+  it('totales por mes con ceros', () => {
+    const r = totalsByMonth(
+      [{ spent_on: '2026-08-03', amount: 10 }, { spent_on: '2026-08-20', amount: 5.5 }, { spent_on: '2026-06-01', amount: 1 }],
+      ['2026-06', '2026-07', '2026-08'],
+    )
+    expect(r).toEqual([1, 0, 15.5])
+  })
+})
+
+describe('cumulativeByDay', () => {
+  it('acumula por día y devuelve un valor por cada día del mes', () => {
+    const r = cumulativeByDay(
+      [{ spent_on: '2026-09-01', amount: 10 }, { spent_on: '2026-09-03', amount: 5 }, { spent_on: '2026-09-03', amount: 2.5 }, { spent_on: '2026-10-01', amount: 99 }],
+      '2026-09',
+    )
+    expect(r.length).toBe(30)
+    expect(r.slice(0, 4)).toEqual([10, 10, 17.5, 17.5])
+    expect(r[29]).toBe(17.5)
+  })
+})
+
+describe('dayCursor', () => {
+  it('mes actual → día de hoy', () => {
+    expect(dayCursor('2026-09', '2026-09-16')).toBe(16)
+  })
+  it('mes pasado → último día; futuro → 0', () => {
+    expect(dayCursor('2026-08', '2026-09-16')).toBe(31)
+    expect(dayCursor('2026-10', '2026-09-16')).toBe(0)
+  })
+})
+
+describe('budgetStatus', () => {
+  it('por debajo del ritmo', () => {
+    const s = budgetStatus(200, 900, 10, 30)
+    expect(s.state).toBe('under')
+    expect(s.paceAllowed).toBe(300)
+    expect(s.remaining).toBe(700)
+    expect(s.daysLeft).toBe(20)
+    expect(s.perDay).toBe(35)
+  })
+  it('por encima del ritmo pero sin pasarse', () => {
+    const s = budgetStatus(500, 900, 10, 30)
+    expect(s.state).toBe('over_pace')
+    expect(s.exceeded).toBe(0)
+  })
+  it('límite superado', () => {
+    const s = budgetStatus(950, 900, 28, 30)
+    expect(s.state).toBe('exceeded')
+    expect(s.exceeded).toBe(50)
+    expect(s.remaining).toBe(0)
+    expect(s.perDay).toBe(0)
+  })
+  it('último día: lo que queda es lo que puedes gastar hoy', () => {
+    const s = budgetStatus(800, 900, 30, 30)
+    expect(s.daysLeft).toBe(0)
+    expect(s.perDay).toBe(100)
+  })
+})

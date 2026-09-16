@@ -217,3 +217,108 @@ export function myShareTotal(expenses: BalanceExpense[], userId: string): number
   }
   return round2(total)
 }
+
+// ------------------------------------------------------------
+// Meses, acumulados y límite mensual
+// ------------------------------------------------------------
+
+/** Días que tiene un mes YYYY-MM. */
+export function daysInMonth(yyyymm: string): number {
+  const [y, m] = yyyymm.split('-').map(Number)
+  return new Date(y, m, 0).getDate()
+}
+
+/** Los últimos n meses terminando en `yyyymm`, del más antiguo al más reciente. */
+export function lastMonths(yyyymm: string, n: number): string[] {
+  const [y, m] = yyyymm.split('-').map(Number)
+  const out: string[] = []
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(y, m - 1 - i, 1)
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  return out
+}
+
+/** Etiqueta corta de un mes: "sep", "oct"… (con año si cambia de año). */
+export function shortMonth(yyyymm: string): string {
+  const [y, m] = yyyymm.split('-').map(Number)
+  const d = new Date(y, m - 1, 1)
+  return d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', '')
+}
+
+/** Total por mes para una lista de meses (0 si no hay nada). */
+export function totalsByMonth(items: Array<{ spent_on: string; amount: number }>, months: string[]): number[] {
+  const map = new Map<string, number>()
+  for (const it of items) {
+    const k = monthOf(it.spent_on)
+    map.set(k, round2((map.get(k) ?? 0) + Number(it.amount)))
+  }
+  return months.map((m) => map.get(m) ?? 0)
+}
+
+/**
+ * Gasto acumulado día a día dentro de un mes. Devuelve un array con tantas
+ * posiciones como días tiene el mes; cada posición es lo gastado hasta ese día.
+ */
+export function cumulativeByDay(items: Array<{ spent_on: string; amount: number }>, yyyymm: string): number[] {
+  const days = daysInMonth(yyyymm)
+  const perDay = new Array<number>(days).fill(0)
+  for (const it of items) {
+    if (monthOf(it.spent_on) !== yyyymm) continue
+    const d = Number(it.spent_on.slice(8, 10))
+    if (d >= 1 && d <= days) perDay[d - 1] += Number(it.amount)
+  }
+  const out: number[] = []
+  let acc = 0
+  for (const v of perDay) {
+    acc = round2(acc + v)
+    out.push(acc)
+  }
+  return out
+}
+
+/**
+ * Día "de hoy" dentro de un mes dado: si es el mes actual, el día de hoy; si es
+ * un mes pasado, el último día; si es futuro, 0.
+ */
+export function dayCursor(yyyymm: string, today: string = todayIso()): number {
+  const cur = monthOf(today)
+  if (yyyymm < cur) return daysInMonth(yyyymm)
+  if (yyyymm > cur) return 0
+  return Number(today.slice(8, 10))
+}
+
+export type BudgetState = 'under' | 'over_pace' | 'exceeded'
+
+export interface BudgetStatus {
+  spent: number
+  limit: number
+  /** Lo que queda hasta el límite (0 si te has pasado). */
+  remaining: number
+  /** Cuánto te has pasado (0 si no). */
+  exceeded: number
+  /** Días que quedan del mes después de hoy. */
+  daysLeft: number
+  /** Lo que puedes gastar por día que queda para no pasarte. */
+  perDay: number
+  /** Lo que "tocaría" haber gastado hoy a ritmo lineal. */
+  paceAllowed: number
+  /** Fracción gastada del límite (puede superar 1). */
+  pct: number
+  state: BudgetState
+}
+
+/**
+ * Estado del límite mensual. `day` es el día de hoy dentro del mes (ver
+ * dayCursor) y `days` los días del mes.
+ */
+export function budgetStatus(spent: number, limit: number, day: number, days: number): BudgetStatus {
+  const remaining = Math.max(0, round2(limit - spent))
+  const exceeded = Math.max(0, round2(spent - limit))
+  const daysLeft = Math.max(0, days - day)
+  const perDay = daysLeft > 0 ? round2(remaining / daysLeft) : remaining
+  const paceAllowed = round2((limit * day) / days)
+  const pct = limit > 0 ? round2(spent / limit) : 0
+  const state: BudgetState = spent > limit + 0.005 ? 'exceeded' : spent > paceAllowed + 0.005 ? 'over_pace' : 'under'
+  return { spent: round2(spent), limit, remaining, exceeded, daysLeft, perDay, paceAllowed, pct, state }
+}
