@@ -135,3 +135,30 @@ El límite personal se compara con "lo mío": gastos personales + mi parte de lo
 repartidos. El del bote, con los gastos pagados con la cuenta conjunta.
 Cálculos en `src/lib/money.ts` (`cumulativeByDay`, `budgetStatus`, `dayCursor`),
 testeados.
+
+## Añadido en 0006 (gastos fijos y huchas simples)
+
+### recurring_expenses — gastos fijos
+| columna | notas |
+|---|---|
+| kind | `personal`, `shared` (repartido) o `pot` (cuenta conjunta) |
+| user_id | dueño (personal), pagador (repartido) o creador (conjunta) |
+| amount | importe fijo, o **null = variable** (se pide cada vez) |
+| every_n_months | 1, 2, 3, 6 o 12 |
+| start_month | primer mes `YYYY-MM` |
+| split_mode / custom_pct | reparto, solo para `shared` (sin "importes exactos") |
+| active | pausado = false |
+
+No hay día del mes: al abrir la app en un mes nuevo, `run_recurring(mes)` recorre los
+fijos activos y, por cada mes que toque (según `every_n_months` desde `start_month`)
+que no tenga fila en `recurring_runs`, crea el gasto con fecha día 1 (importe fijo)
+o deja la fila en `pending` (variable). `resolve_pending(run, importe)` crea el gasto y
+`skip_pending(run)` lo marca como "este mes no". Los gastos creados llevan
+`expenses.recurring_id`. Si se borra un gasto creado, no se vuelve a crear.
+
+RLS: los personales solo los ve su dueño; repartidos y conjunta los ven los dos.
+
+### Huchas
+`savings_goals.target_amount` ahora es opcional (hucha sin objetivo = colchón).
+`goal_contributions.direction` (`in` / `out`): saldo = entradas − salidas. Plan
+mensual y proyección en `src/lib/money.ts` (`monthlyPlan`, `projectedMonth`).

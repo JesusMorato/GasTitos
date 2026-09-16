@@ -3,9 +3,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useSession } from '../composables/useSession'
 import { useData, type GoalInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
-import { formatEur, lastMonths, monthOf, myShareTotal, round2, shortMonth, sum, todayIso, totalsBy, totalsByMonth } from '../lib/money'
+import { useMonth } from '../composables/useMonth'
+import { formatEur, lastMonths, monthOf, myShareTotal, round2, shortMonth, sum, totalsBy, totalsByMonth } from '../lib/money'
 import type { Contribution, SavingsGoal } from '../types'
-import MonthPicker from '../components/MonthPicker.vue'
 import ExpenseList from '../components/ExpenseList.vue'
 import CategoryIcon from '../components/CategoryIcon.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -14,12 +14,14 @@ import GoalCard from '../components/GoalCard.vue'
 import DonutChart from '../components/DonutChart.vue'
 import MonthlyBars from '../components/MonthlyBars.vue'
 import BudgetCard from '../components/BudgetCard.vue'
+import PendingRecurring from '../components/PendingRecurring.vue'
+import UiIcon from '../components/UiIcon.vue'
 
-const { state, nameOf } = useSession()
+const { state, me, nameOf } = useSession()
 const data = useData()
 const editor = useEditor()
+const { month } = useMonth()
 
-const month = ref(monthOf(todayIso()))
 const showGoalForm = ref(false)
 const editingGoal = ref<SavingsGoal | undefined>()
 const actionError = ref<string | null>(null)
@@ -27,19 +29,24 @@ const actionError = ref<string | null>(null)
 onMounted(() => data.ensureLoaded())
 
 const userId = computed(() => state.user!.id)
+const myPct = computed(() => (me.value?.share_pct ?? 50) / 100)
 const rows = computed<ExpenseRow[]>(() => data.expensesWithShares.value)
 const monthRows = computed(() => rows.value.filter((e) => monthOf(e.spent_on) === month.value))
 
 /**
- * "Lo mío": cada gasto personal entero y mi parte de cada repartido.
- * Es el agregado que usan la cifra del mes, el donut, el límite y las barras.
+ * "Lo mío": cada gasto personal entero, mi parte de cada repartido y mi
+ * porcentaje del hogar de lo pagado con la cuenta conjunta. Es el agregado que
+ * usan la cifra del mes, el donut, el límite y las barras.
  */
 interface MyItem { spent_on: string; amount: number; category_id: string }
 const myItemsAll = computed<MyItem[]>(() => {
   const out: MyItem[] = []
   for (const e of rows.value) {
-    if (!e.is_shared && e.user_id === userId.value) out.push({ spent_on: e.spent_on, amount: e.amount, category_id: e.category_id })
-    else if (e.is_shared && e.funding === 'personal') {
+    if (!e.is_shared) {
+      if (e.user_id === userId.value) out.push({ spent_on: e.spent_on, amount: e.amount, category_id: e.category_id })
+    } else if (e.funding === 'pot') {
+      out.push({ spent_on: e.spent_on, amount: round2(e.amount * myPct.value), category_id: e.category_id })
+    } else {
       const mine = e.shares.find((s) => s.user_id === userId.value)?.amount ?? 0
       if (mine > 0) out.push({ spent_on: e.spent_on, amount: mine, category_id: e.category_id })
     }
@@ -51,7 +58,9 @@ const myItemsMonth = computed(() => myItemsAll.value.filter((x) => monthOf(x.spe
 const myExpenses = computed(() => monthRows.value.filter((e) => !e.is_shared && e.user_id === userId.value))
 const totalPersonal = computed(() => sum(myExpenses.value.map((e) => e.amount)))
 const myShare = computed(() => myShareTotal(monthRows.value, userId.value))
-const totalMonth = computed(() => round2(totalPersonal.value + myShare.value))
+const myPot = computed(() => round2(sum(monthRows.value.filter((e) => e.is_shared && e.funding === 'pot').map((e) => e.amount)) * myPct.value))
+const totalMonth = computed(() => round2(totalPersonal.value + myShare.value + myPot.value))
+const fixedCount = computed(() => myExpenses.value.filter((e) => e.recurring_id).length)
 
 const byCategory = computed(() => totalsBy(myItemsMonth.value, (x) => x.category_id, (x) => x.amount))
 const donutItems = computed(() =>
@@ -67,6 +76,7 @@ const bars6 = computed(() => [{ label: 'Gastado', values: totalsByMonth(myItemsA
 const labels6 = computed(() => months6.value.map(shortMonth))
 
 const myLimit = computed(() => data.myBudget(userId.value)?.monthly_limit ?? null)
+const myPending = computed(() => data.pendingRuns.value.filter((p) => p.recurring.kind === 'personal'))
 
 const myGoals = computed(() => data.goals.value.filter((g) => !g.is_shared && g.user_id === userId.value))
 const totalSaved = computed(() => sum(myGoals.value.map((g) => data.savedByGoal.value[g.id] ?? 0)))
@@ -105,16 +115,16 @@ function editGoal(g: SavingsGoal) {
   showGoalForm.value = true
 }
 function deleteGoal(g: SavingsGoal) {
-  if (confirm(`¿Borrar la hucha "${g.name}" y todas sus aportaciones?`)) run(() => data.deleteGoal(g.id))
+  if (confirm(`¿Borrar la hucha "${g.name}" y todos sus movimientos?`)) run(() => data.deleteGoal(g.id))
 }
 function toggleGoalPublic(g: SavingsGoal) {
   run(() => data.updateGoal(g.id, { is_public: !g.is_public }))
 }
-function contribute(g: SavingsGoal, amount: number, date: string, note: string | null) {
-  run(() => data.addContribution(g.id, userId.value, amount, date, note))
+function moveGoal(g: SavingsGoal, amount: number, date: string, note: string | null, direction: 'in' | 'out') {
+  run(() => data.addContribution(g.id, userId.value, amount, date, note, direction))
 }
 function deleteContribution(c: Contribution) {
-  if (confirm('¿Borrar esta aportación?')) run(() => data.deleteContribution(c.id))
+  if (confirm('¿Borrar este movimiento?')) run(() => data.deleteContribution(c.id))
 }
 </script>
 
@@ -123,11 +133,12 @@ function deleteContribution(c: Contribution) {
     <div class="card accent">
       <div class="tiny" style="text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700">Mi mes</div>
       <div class="hero-number" style="margin: 0.2rem 0">{{ formatEur(totalMonth) }}</div>
-      <div class="muted tnum">Personal {{ formatEur(totalPersonal) }} · Mi parte en pareja {{ formatEur(myShare) }}</div>
+      <div class="muted tnum">Personal {{ formatEur(totalPersonal) }} · Repartido {{ formatEur(myShare) }} · Conjunta {{ formatEur(myPot) }}</div>
     </div>
 
+    <PendingRecurring :items="myPending" :category-by-id="data.categoryById.value" :last-amount-of="data.lastAmountOf" @resolve="(id, a) => run(() => data.resolvePending(id, a))" @skip="(id) => run(() => data.skipPending(id))" />
+
     <div class="card">
-      <MonthPicker v-model="month" />
       <template v-if="byCategory.length">
         <DonutChart :items="donutItems" :total="totalMonth" caption="este mes" />
         <ul class="donut-legend">
@@ -138,7 +149,7 @@ function deleteContribution(c: Contribution) {
           </li>
         </ul>
       </template>
-      <EmptyState v-else kind="gastos">Sin gastos este mes. Pulsa ➕ para apuntar el primero.</EmptyState>
+      <EmptyState v-else kind="gastos">Sin gastos este mes. Pulsa + para apuntar el primero.</EmptyState>
     </div>
 
     <BudgetCard :items="myItemsMonth" :month="month" :limit="myLimit" title="Mi límite del mes" @set-limit="setLimit" />
@@ -146,7 +157,7 @@ function deleteContribution(c: Contribution) {
     <div class="card">
       <div class="row between" style="margin-bottom: 0.4rem">
         <h2>Últimos 6 meses</h2>
-        <span class="tiny">personal + mi parte</span>
+        <span class="tiny">personal + repartido + conjunta</span>
       </div>
       <MonthlyBars :labels="labels6" :datasets="bars6" average :highlight="5" />
     </div>
@@ -155,10 +166,10 @@ function deleteContribution(c: Contribution) {
 
     <div class="card">
       <div class="section-title" style="margin-top: 0">
-        <h2>Mis gastos</h2>
+        <h2>Mis gastos <span v-if="fixedCount" class="tag muted" style="margin-left: 0.3rem"><UiIcon name="repeat" :size="12" /> {{ fixedCount }} fijos</span></h2>
         <button type="button" class="small secondary" @click="editor.openNew('personal')">+ Añadir</button>
       </div>
-      <p class="tiny" style="margin-bottom: 0.5rem">🔒 Privados por defecto. Con los tres puntos de cada gasto puedes hacerlo visible para tu pareja, solo lectura.</p>
+      <p class="tiny" style="margin-bottom: 0.5rem">Privados por defecto. Con los tres puntos de cada gasto puedes hacerlo visible para tu pareja, solo lectura.</p>
       <ExpenseList
         :expenses="myExpenses"
         :category-by-id="data.categoryById.value"
@@ -190,7 +201,7 @@ function deleteContribution(c: Contribution) {
       @edit="editGoal"
       @delete="deleteGoal"
       @toggle-public="toggleGoalPublic"
-      @contribute="contribute"
+      @move="moveGoal"
       @delete-contribution="deleteContribution"
     />
 

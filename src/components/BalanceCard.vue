@@ -23,14 +23,13 @@ function initial(name: string) {
       <div class="hero-number" style="margin: 0.2rem 0">{{ formatEur(balance.settlement.amount) }}</div>
       <div class="balance-line">
         <span class="avatar" :style="{ background: 'rgba(255,255,255,.25)', color: 'inherit' }">{{ initial(nameOf(balance.settlement.from)) }}</span>
-        <strong>{{ balance.settlement.from === currentUserId ? 'Debes' : nameOf(balance.settlement.from) + ' debe' }}</strong>
-        <span>a</span>
-        <span class="avatar" :style="{ background: 'rgba(255,255,255,.25)', color: 'inherit' }">{{ initial(nameOf(balance.settlement.to)) }}</span>
-        <strong>{{ balance.settlement.to === currentUserId ? 'ti' : nameOf(balance.settlement.to) }}</strong>
+        <strong v-if="balance.settlement.from === currentUserId">Le debes a {{ nameOf(balance.settlement.to) }}</strong>
+        <strong v-else-if="balance.settlement.to === currentUserId">{{ nameOf(balance.settlement.from) }} te debe</strong>
+        <strong v-else>{{ nameOf(balance.settlement.from) }} le debe a {{ nameOf(balance.settlement.to) }}</strong>
       </div>
     </template>
     <template v-else>
-      <div class="hero-number" style="margin: 0.2rem 0">En paz 🎉</div>
+      <div class="hero-number" style="margin: 0.2rem 0">En paz</div>
       <div class="muted">Nadie debe nada a nadie.</div>
     </template>
     <div class="row" style="margin-top: 0.9rem; justify-content: space-between">

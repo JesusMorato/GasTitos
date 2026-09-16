@@ -2,14 +2,17 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
-import { useData } from '../composables/useData'
-import type { Category } from '../types'
+import { useData, type RecurringInput } from '../composables/useData'
+import type { Category, RecurringExpense } from '../types'
+import { formatEur } from '../lib/money'
 import CategoryIcon from '../components/CategoryIcon.vue'
 import Sheet from '../components/Sheet.vue'
 import EmojiPicker from '../components/EmojiPicker.vue'
+import RecurringForm from '../components/RecurringForm.vue'
+import UiIcon from '../components/UiIcon.vue'
 
 const router = useRouter()
-const { state, me, partner, signOut, renameHousehold, renameMe, setMySplit } = useSession()
+const { state, me, partner, nameOf, signOut, renameHousehold, renameMe, setMySplit } = useSession()
 const data = useData()
 
 onMounted(() => data.ensureLoaded())
@@ -49,6 +52,29 @@ async function run(fn: () => Promise<void>, okMsg: string) {
   } catch (e) {
     err.value = (e as Error).message
   }
+}
+
+// --- gastos fijos ---
+const recOpen = ref(false)
+const recEditing = ref<RecurringExpense | undefined>()
+const kindLabel: Record<RecurringExpense['kind'], string> = { personal: 'personal', shared: 'repartido', pot: 'conjunta' }
+function everyLabel(n: number) {
+  return n === 1 ? 'cada mes' : n === 12 ? 'cada año' : `cada ${n} meses`
+}
+function openRec(r?: RecurringExpense) {
+  recEditing.value = r
+  recOpen.value = true
+}
+function saveRec(input: RecurringInput) {
+  const editing = recEditing.value
+  recOpen.value = false
+  run(() => (editing ? data.updateRecurring(editing.id, input) : data.addRecurring(state.household!.id, input)), 'Gasto fijo guardado')
+}
+function toggleRec(r: RecurringExpense) {
+  run(() => data.updateRecurring(r.id, { active: !r.active }), r.active ? 'Gasto fijo pausado' : 'Gasto fijo activado')
+}
+function deleteRec(r: RecurringExpense) {
+  if (confirm(`¿Borrar el gasto fijo "${r.name}"? Los gastos ya apuntados se quedan.`)) run(() => data.deleteRecurring(r.id), 'Gasto fijo borrado')
 }
 
 // --- categorías ---
@@ -102,6 +128,32 @@ async function logout() {
     <p v-if="err" class="error">{{ err }}</p>
 
     <div class="card">
+      <div class="section-title" style="margin-top: 0">
+        <h2>Gastos fijos</h2>
+        <button type="button" class="small secondary" @click="openRec()">+ Nuevo</button>
+      </div>
+      <p class="tiny" style="margin-bottom: 0.4rem">Al entrar en un mes nuevo se apuntan solos. Los de importe variable quedan pendientes hasta que pongas la cifra.</p>
+      <div v-if="data.recurring.value.length === 0" class="empty">Aún no hay gastos fijos. Empieza por el alquiler.</div>
+      <ul v-else class="list">
+        <li v-for="r in data.recurring.value" :key="r.id" :style="{ opacity: r.active ? 1 : 0.55 }">
+          <CategoryIcon :icon="data.categoryById.value[r.category_id]?.icon" :emoji="data.categoryById.value[r.category_id]?.emoji" :color="data.categoryById.value[r.category_id]?.color" />
+          <div class="grow">
+            <div class="ellipsis"><strong>{{ r.name }}</strong> <span class="tag muted">{{ kindLabel[r.kind] }}</span></div>
+            <div class="tiny">
+              {{ everyLabel(r.every_n_months) }}<span v-if="r.kind === 'shared'"> · paga {{ nameOf(r.user_id) }}</span><span v-if="!r.active"> · pausado</span>
+            </div>
+          </div>
+          <span class="amount">{{ r.amount == null ? 'variable' : formatEur(r.amount) }}</span>
+          <div class="actions">
+            <button type="button" class="icon" :title="r.active ? 'Pausar' : 'Activar'" :aria-label="r.active ? 'Pausar' : 'Activar'" @click="toggleRec(r)"><UiIcon :name="r.active ? 'pause' : 'play'" :size="18" /></button>
+            <button type="button" class="icon" title="Editar" aria-label="Editar" @click="openRec(r)"><UiIcon name="pencil" :size="18" /></button>
+            <button type="button" class="icon" title="Borrar" aria-label="Borrar" @click="deleteRec(r)"><UiIcon name="trash" :size="18" /></button>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
       <h2>Tú</h2>
       <div class="field" style="margin-top: 0.6rem">
         <label for="myname">Tu nombre (como te ve tu pareja)</label>
@@ -140,26 +192,26 @@ async function logout() {
           <button type="button" class="small" :disabled="Math.round(me?.share_pct ?? 50) === myPct" @click="run(() => setMySplit(myPct), 'Reparto actualizado')">Guardar reparto</button>
           <button type="button" class="ghost small" @click="myPct = 50">50/50</button>
         </div>
-        <p class="help">Es el reparto que se propone al apuntar un gasto repartido. Cada gasto puede cambiarlo.</p>
+        <p class="help">Es el reparto que se propone al apuntar un gasto repartido, y el que se usa para tu parte de la cuenta conjunta en "Mi mes".</p>
       </div>
     </div>
 
     <div class="card">
       <h2>Límites mensuales</h2>
-      <p class="tiny" style="margin: 0.3rem 0 0.6rem">Orientativos: no bloquean nada, solo avisan cuando vas rápido o te pasas. Se ven en "Mi mes" y en Pareja → Bote.</p>
+      <p class="tiny" style="margin: 0.3rem 0 0.6rem">Orientativos: no bloquean nada, solo avisan cuando vas rápido o te pasas. Se ven en "Mi mes" y en Pareja → Conjunta.</p>
       <div class="grid2">
         <div class="field">
-          <label for="mylimit">Mi límite (personal + mi parte)</label>
+          <label for="mylimit">Mi límite (personal + repartido + conjunta)</label>
           <div class="row">
             <input id="mylimit" v-model.number="myLimit" type="number" min="0" step="1" inputmode="decimal" placeholder="Sin límite" class="grow" />
             <button type="button" class="small" :disabled="(myLimit || null) === (data.myBudget(state.user!.id)?.monthly_limit ?? null)" @click="run(() => data.setBudget('personal', myLimit > 0 ? myLimit : null), 'Límite guardado')">Guardar</button>
           </div>
         </div>
         <div class="field space-pareja">
-          <label for="potlimit">Límite del bote (común)</label>
+          <label for="potlimit">Límite de la cuenta conjunta (común)</label>
           <div class="row">
             <input id="potlimit" v-model.number="potLimit" type="number" min="0" step="1" inputmode="decimal" placeholder="Sin límite" class="grow" />
-            <button type="button" class="small" :disabled="(potLimit || null) === (data.potBudget.value?.monthly_limit ?? null)" @click="run(() => data.setBudget('pot', potLimit > 0 ? potLimit : null), 'Límite del bote guardado')">Guardar</button>
+            <button type="button" class="small" :disabled="(potLimit || null) === (data.potBudget.value?.monthly_limit ?? null)" @click="run(() => data.setBudget('pot', potLimit > 0 ? potLimit : null), 'Límite de la cuenta conjunta guardado')">Guardar</button>
           </div>
         </div>
       </div>
@@ -177,10 +229,10 @@ async function logout() {
           <CategoryIcon :icon="c.icon" :emoji="c.emoji" :color="c.color" />
           <div class="grow ellipsis"><strong>{{ c.name }}</strong></div>
           <div class="actions">
-            <button type="button" class="icon" title="Subir" :disabled="i === 0" @click="moveCat(c, -1)">↑</button>
-            <button type="button" class="icon" title="Bajar" :disabled="i === data.categories.value.length - 1" @click="moveCat(c, 1)">↓</button>
-            <button type="button" class="icon" title="Editar" @click="openCat(c)">✏️</button>
-            <button type="button" class="icon" title="Borrar" @click="deleteCat(c)">🗑️</button>
+            <button type="button" class="icon" title="Subir" aria-label="Subir" :disabled="i === 0" @click="moveCat(c, -1)"><UiIcon name="chevronUp" :size="18" /></button>
+            <button type="button" class="icon" title="Bajar" aria-label="Bajar" :disabled="i === data.categories.value.length - 1" @click="moveCat(c, 1)"><UiIcon name="chevronDown" :size="18" /></button>
+            <button type="button" class="icon" title="Editar" aria-label="Editar" @click="openCat(c)"><UiIcon name="pencil" :size="18" /></button>
+            <button type="button" class="icon" title="Borrar" aria-label="Borrar" @click="deleteCat(c)"><UiIcon name="trash" :size="18" /></button>
           </div>
         </li>
       </ul>
@@ -189,6 +241,16 @@ async function logout() {
     <div class="card flat">
       <button type="button" class="danger small" @click="logout">Cerrar sesión</button>
     </div>
+
+    <RecurringForm
+      v-if="recOpen && state.user"
+      :members="state.members"
+      :categories="data.categories.value"
+      :current-user-id="state.user.id"
+      :initial="recEditing"
+      @save="saveRec"
+      @close="recOpen = false"
+    />
 
     <Sheet v-if="catOpen" :title="catEditing ? 'Editar categoría' : 'Nueva categoría'" @close="catOpen = false">
       <form @submit.prevent="saveCat">

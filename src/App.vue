@@ -4,15 +4,21 @@ import { useRoute } from 'vue-router'
 import { useSession } from './composables/useSession'
 import { useData, type ExpenseInput } from './composables/useData'
 import { useEditor } from './composables/useEditor'
+import { useMonth } from './composables/useMonth'
+import { formatMonth } from './lib/money'
 import QuickAdd from './components/QuickAdd.vue'
 import ExpenseForm from './components/ExpenseForm.vue'
+import UiIcon from './components/UiIcon.vue'
+import Logo from './components/Logo.vue'
 
 const { state, partner } = useSession()
 const data = useData()
 const editor = useEditor()
 const route = useRoute()
+const { month, shift, reset, isCurrent } = useMonth()
 
 const inApp = computed(() => !!state.user && !!state.household)
+const showMonth = computed(() => inApp.value && (route.name === 'personal' || route.name === 'couple'))
 const navAccent = computed(() => (route.name === 'couple' ? 'var(--pareja)' : 'var(--yo)'))
 
 async function saveExpense(input: ExpenseInput) {
@@ -29,10 +35,17 @@ async function saveExpense(input: ExpenseInput) {
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="topbar" :class="{ 'space-pareja': route.name === 'couple', 'space-yo': route.name !== 'couple' }">
     <div class="inner">
-      <router-link class="brand" to="/">Gas<span>Titos</span></router-link>
-      <router-link v-if="inApp" :to="{ name: 'settings' }" class="btn icon" aria-label="Ajustes" title="Ajustes">⚙️</router-link>
+      <router-link class="brand" to="/"><Logo :size="26" /> Gas<span>Titos</span></router-link>
+      <router-link v-if="inApp" :to="{ name: 'settings' }" class="btn icon" aria-label="Ajustes" title="Ajustes"><UiIcon name="settings" /></router-link>
+    </div>
+    <div v-if="showMonth" class="monthrow">
+      <button type="button" class="icon" aria-label="Mes anterior" @click="shift(-1)">‹</button>
+      <button type="button" class="ghost month-label" :title="isCurrent() ? '' : 'Volver al mes actual'" @click="reset()">
+        {{ formatMonth(month) }}<span v-if="!isCurrent()" class="tag" style="margin-left: 0.4rem">hoy</span>
+      </button>
+      <button type="button" class="icon" aria-label="Mes siguiente" @click="shift(1)">›</button>
     </div>
   </header>
 
@@ -44,12 +57,12 @@ async function saveExpense(input: ExpenseInput) {
   <nav v-if="inApp" class="bottomnav" :style="{ '--nav-accent': navAccent }">
     <div class="inner">
       <router-link :to="{ name: 'personal' }">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <UiIcon name="user" :size="24" />
         Yo
       </router-link>
       <button type="button" class="fab" aria-label="Añadir gasto" :style="{ '--accent': navAccent }" @click="editor.openQuick()">+</button>
       <router-link :to="{ name: 'couple' }">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3.5"/><circle cx="16.5" cy="9" r="3"/><path d="M2.5 20c0-3.3 2.5-6 5.5-6s5.5 2.7 5.5 6"/><path d="M13 20c0-2.8 1.8-5 3.8-5S21 17.2 21 20"/></svg>
+        <UiIcon name="users" :size="24" />
         Pareja
       </router-link>
     </div>
@@ -77,4 +90,7 @@ async function saveExpense(input: ExpenseInput) {
   box-shadow: var(--shadow); z-index: 60; max-width: calc(100% - 32px);
 }
 .topbar .btn.icon { text-decoration: none; }
+.brand { display: inline-flex; align-items: center; gap: 0.35rem; }
+.monthrow { max-width: 680px; margin: 0 auto; padding: 0 8px 6px; display: flex; align-items: center; justify-content: center; gap: 0.25rem; }
+.month-label { font-family: var(--font-display); font-weight: 600; font-size: 1rem; color: var(--ink); min-width: 170px; justify-content: center; }
 </style>

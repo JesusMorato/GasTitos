@@ -3,11 +3,11 @@ import { computed, onMounted, ref } from 'vue'
 import { useSession } from '../composables/useSession'
 import { useData, type GoalInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
-import { computeBalance, formatEur, lastMonths, monthOf, paidByMember, shortMonth, sum, todayIso, totalsBy, totalsByMonth } from '../lib/money'
+import { useMonth } from '../composables/useMonth'
+import { computeBalance, formatDate, formatEur, lastMonths, monthOf, paidByMember, shortMonth, sum, totalsBy, totalsByMonth } from '../lib/money'
+import { cssVar } from '../lib/charts'
 import type { Contribution, SavingsGoal, Settlement } from '../types'
-import { formatDate } from '../lib/money'
 import SegmentedControl from '../components/SegmentedControl.vue'
-import MonthPicker from '../components/MonthPicker.vue'
 import BalanceCard from '../components/BalanceCard.vue'
 import ExpenseList from '../components/ExpenseList.vue'
 import CategoryIcon from '../components/CategoryIcon.vue'
@@ -18,22 +18,25 @@ import GoalCard from '../components/GoalCard.vue'
 import DonutChart from '../components/DonutChart.vue'
 import MonthlyBars from '../components/MonthlyBars.vue'
 import BudgetCard from '../components/BudgetCard.vue'
+import PendingRecurring from '../components/PendingRecurring.vue'
+import UiIcon from '../components/UiIcon.vue'
 
-type Tab = 'split' | 'pot' | 'together'
+type Tab = 'split' | 'pot' | 'goals'
 
 const { state, partner, memberIds, nameOf } = useSession()
 const data = useData()
 const editor = useEditor()
+const { month } = useMonth()
 
 const tab = ref<Tab>('split')
 const tabs: Array<{ value: Tab; label: string }> = [
   { value: 'split', label: 'Repartidos' },
-  { value: 'pot', label: 'Bote' },
-  { value: 'together', label: 'Juntos' },
+  { value: 'pot', label: 'Conjunta' },
+  { value: 'goals', label: 'Huchas' },
 ]
-const month = ref(monthOf(todayIso()))
 const showSettle = ref(false)
 const showHistory = ref(false)
+const showPartnerPublic = ref(false)
 const showGoalForm = ref(false)
 const editingGoal = ref<SavingsGoal | undefined>()
 const actionError = ref<string | null>(null)
@@ -49,26 +52,20 @@ const splitMonth = computed(() => splitAll.value.filter((e) => monthOf(e.spent_o
 const balance = computed(() => computeBalance(splitAll.value, data.settlements.value, memberIds.value))
 const paidMonth = computed(() => paidByMember(splitMonth.value, memberIds.value))
 const splitMonthTotal = computed(() => sum(splitMonth.value.map((e) => e.amount)))
+const sharedPending = computed(() => data.pendingRuns.value.filter((p) => p.recurring.kind === 'shared'))
 
-// Últimos 6 meses (comparten selector de mes con el resto de la pestaña)
 const months6 = computed(() => lastMonths(month.value, 6))
 const labels6 = computed(() => months6.value.map(shortMonth))
-const memberColors = ['var(--pareja)', 'var(--yo)']
+const memberVars = ['--pareja', '--yo']
 const paidBars = computed(() =>
   state.members.map((m, i) => ({
     label: m.display_name,
     values: totalsByMonth(splitAll.value.filter((e) => e.user_id === m.user_id), months6.value),
-    color: memberColorHex(i),
+    color: cssVar(document.documentElement, memberVars[i] ?? '--accent', '#5b4f8f'),
   })),
 )
-function memberColorHex(i: number): string {
-  // Los charts necesitan hex, no var(): leemos el color resuelto del documento.
-  const name = memberColors[i] ?? 'var(--accent)'
-  const v = name.match(/var\((--[\w-]+)\)/)?.[1]
-  return v ? getComputedStyle(document.documentElement).getPropertyValue(v).trim() || '#5b4f8f' : name
-}
 
-// --- Bote ---
+// --- Cuenta conjunta ---
 const potAll = computed(() => rows.value.filter((e) => e.is_shared && e.funding === 'pot'))
 const potMonth = computed(() => potAll.value.filter((e) => monthOf(e.spent_on) === month.value))
 const potTotal = computed(() => sum(potMonth.value.map((e) => e.amount)))
@@ -80,13 +77,12 @@ const potDonut = computed(() =>
     color: data.categoryById.value[c.key]?.color ?? '#7a857f',
   })),
 )
-const potBars = computed(() => [{ label: 'Bote', values: totalsByMonth(potAll.value, months6.value) }])
+const potBars = computed(() => [{ label: 'Conjunta', values: totalsByMonth(potAll.value, months6.value) }])
 const potLimit = computed(() => data.potBudget.value?.monthly_limit ?? null)
-function setPotLimit(v: number | null) {
-  run(() => data.setBudget('pot', v))
-}
+const potPending = computed(() => data.pendingRuns.value.filter((p) => p.recurring.kind === 'pot'))
+const potFixedCount = computed(() => potMonth.value.filter((e) => e.recurring_id).length)
 
-// --- Juntos ---
+// --- Huchas ---
 const sharedGoals = computed(() => data.goals.value.filter((g) => g.is_shared))
 const partnerPublicExpenses = computed(() =>
   rows.value.filter((e) => !e.is_shared && e.is_public && e.user_id !== userId.value && monthOf(e.spent_on) === month.value),
@@ -106,6 +102,9 @@ async function run(fn: () => Promise<void>) {
   }
 }
 
+function setPotLimit(v: number | null) {
+  run(() => data.setBudget('pot', v))
+}
 function deleteExpense(x: ExpenseRow) {
   if (confirm(`¿Borrar el gasto de ${formatEur(x.amount)}?`)) run(() => data.deleteExpense(x.id))
 }
@@ -128,13 +127,13 @@ function editGoal(g: SavingsGoal) {
   showGoalForm.value = true
 }
 function deleteGoal(g: SavingsGoal) {
-  if (confirm(`¿Borrar la hucha "${g.name}" y todas sus aportaciones?`)) run(() => data.deleteGoal(g.id))
+  if (confirm(`¿Borrar la hucha "${g.name}" y todos sus movimientos?`)) run(() => data.deleteGoal(g.id))
 }
-function contribute(g: SavingsGoal, amount: number, date: string, note: string | null) {
-  run(() => data.addContribution(g.id, userId.value, amount, date, note))
+function moveGoal(g: SavingsGoal, amount: number, date: string, note: string | null, direction: 'in' | 'out') {
+  run(() => data.addContribution(g.id, userId.value, amount, date, note, direction))
 }
 function deleteContribution(c: Contribution) {
-  if (confirm('¿Borrar esta aportación?')) run(() => data.deleteContribution(c.id))
+  if (confirm('¿Borrar este movimiento?')) run(() => data.deleteContribution(c.id))
 }
 </script>
 
@@ -155,8 +154,9 @@ function deleteContribution(c: Contribution) {
     <template v-if="tab === 'split'">
       <BalanceCard :balance="balance" :members="state.members" :current-user-id="userId" :name-of="nameOf" @settle="showSettle = true" />
 
+      <PendingRecurring :items="sharedPending" :category-by-id="data.categoryById.value" :last-amount-of="data.lastAmountOf" @resolve="(id, a) => run(() => data.resolvePending(id, a))" @skip="(id) => run(() => data.skipPending(id))" />
+
       <div class="card">
-        <MonthPicker v-model="month" />
         <div class="kpis">
           <div class="kpi">
             <div class="label">Repartido este mes</div>
@@ -175,7 +175,7 @@ function deleteContribution(c: Contribution) {
         </div>
         <MonthlyBars :labels="labels6" :datasets="paidBars" :highlight="5" />
         <div class="row tiny" style="gap: 1rem; margin-top: 0.4rem">
-          <span v-for="(m, i) in state.members" :key="m.user_id"><span class="dot-legend" :style="{ background: memberColors[i] }" /> {{ m.display_name }}</span>
+          <span v-for="(m, i) in state.members" :key="m.user_id"><span class="dot-legend" :style="{ background: `var(${memberVars[i] ?? '--accent'})` }" /> {{ m.display_name }}</span>
         </div>
       </div>
 
@@ -199,35 +199,66 @@ function deleteContribution(c: Contribution) {
 
       <div class="card flat">
         <button type="button" class="ghost small" style="padding-left: 0" @click="showHistory = !showHistory">
-          {{ showHistory ? 'Ocultar pagos entre vosotros' : `Pagos entre vosotros (${data.settlements.value.length})` }}
+          <UiIcon :name="showHistory ? 'chevronUp' : 'chevronDown'" :size="16" />
+          Pagos entre vosotros ({{ data.settlements.value.length }})
         </button>
         <ul v-if="showHistory" class="list">
           <li v-if="data.settlements.value.length === 0" class="muted">Todavía no habéis saldado cuentas.</li>
           <li v-for="s in data.settlements.value" :key="s.id">
-            <span class="emoji-badge" :style="{ '--badge': 'var(--pareja)' }">💸</span>
+            <span class="emoji-badge" :style="{ '--badge': 'var(--pareja)' }"><UiIcon name="transfer" /></span>
             <div class="grow">
               <div>{{ nameOf(s.from_user) }} → {{ nameOf(s.to_user) }}<span v-if="s.note" class="muted"> · {{ s.note }}</span></div>
               <div class="tiny">{{ formatDate(s.settled_on) }}</div>
             </div>
             <span class="amount">{{ formatEur(s.amount) }}</span>
-            <button type="button" class="icon" title="Borrar" @click="deleteSettlement(s)">🗑️</button>
+            <button type="button" class="icon" title="Borrar" aria-label="Borrar pago" @click="deleteSettlement(s)"><UiIcon name="trash" :size="18" /></button>
           </li>
         </ul>
       </div>
+
+      <div v-if="partner" class="card flat">
+        <button type="button" class="ghost small" style="padding-left: 0" @click="showPartnerPublic = !showPartnerPublic">
+          <UiIcon :name="showPartnerPublic ? 'chevronUp' : 'chevronDown'" :size="16" />
+          Lo que {{ partner.display_name }} comparte contigo ({{ partnerPublicExpenses.length + partnerPublicGoals.length }})
+        </button>
+        <template v-if="showPartnerPublic">
+          <p class="tiny" style="margin: 0.3rem 0 0.5rem">Gastos y huchas personales que ha hecho públicos. Solo lectura.</p>
+          <ExpenseList
+            :expenses="partnerPublicExpenses"
+            :category-by-id="data.categoryById.value"
+            :name-of="nameOf"
+            :editable="false"
+            empty-text="No ha hecho público ningún gasto este mes."
+          />
+          <div class="stack" style="margin-top: 0.6rem">
+            <GoalCard
+              v-for="g in partnerPublicGoals"
+              :key="g.id"
+              :goal="g"
+              :contributions="contributionsOf(g.id)"
+              :saved="data.savedByGoal.value[g.id] ?? 0"
+              :name-of="nameOf"
+              :current-user-id="userId"
+              :editable="false"
+            />
+          </div>
+        </template>
+      </div>
     </template>
 
-    <!-- ===== Bote ===== -->
+    <!-- ===== Cuenta conjunta ===== -->
     <template v-else-if="tab === 'pot'">
       <div class="card accent">
-        <div class="tiny" style="text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700">Gastado del bote</div>
+        <div class="tiny" style="text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700">Gastado de la cuenta conjunta</div>
         <div class="hero-number" style="margin: 0.2rem 0">{{ formatEur(potTotal) }}</div>
-        <div class="muted">Pagado con la cuenta conjunta. No entra en el balance.</div>
+        <div class="muted">Pagado con la cuenta común. No entra en el balance.</div>
       </div>
 
+      <PendingRecurring :items="potPending" :category-by-id="data.categoryById.value" :last-amount-of="data.lastAmountOf" @resolve="(id, a) => run(() => data.resolvePending(id, a))" @skip="(id) => run(() => data.skipPending(id))" />
+
       <div class="card">
-        <MonthPicker v-model="month" />
         <template v-if="potByCategory.length">
-          <DonutChart :items="potDonut" :total="potTotal" caption="del bote" />
+          <DonutChart :items="potDonut" :total="potTotal" caption="conjunta" />
           <ul class="donut-legend">
             <li v-for="c in potByCategory" :key="c.key" :style="{ '--dot': data.categoryById.value[c.key]?.color }">
               <span class="dot" />
@@ -236,21 +267,21 @@ function deleteContribution(c: Contribution) {
             </li>
           </ul>
         </template>
-        <div v-else class="empty">Nada pagado con el bote este mes.</div>
+        <div v-else class="empty">Nada pagado con la cuenta conjunta este mes.</div>
       </div>
 
-      <BudgetCard :items="potMonth" :month="month" :limit="potLimit" title="Límite del bote" empty-hint="Ponle un límite mensual a la cuenta conjunta y veréis cómo os acercáis a él." @set-limit="setPotLimit" />
+      <BudgetCard :items="potMonth" :month="month" :limit="potLimit" title="Límite de la cuenta conjunta" empty-hint="Ponle un límite mensual a la cuenta conjunta y veréis cómo os acercáis a él." @set-limit="setPotLimit" />
 
       <div class="card">
         <div class="row between" style="margin-bottom: 0.4rem">
-          <h2>Bote, últimos 6 meses</h2>
+          <h2>Cuenta conjunta, últimos 6 meses</h2>
         </div>
         <MonthlyBars :labels="labels6" :datasets="potBars" average :highlight="5" />
       </div>
 
       <div class="card">
         <div class="section-title" style="margin-top: 0">
-          <h2>Gastos del bote</h2>
+          <h2>Gastos de la cuenta conjunta <span v-if="potFixedCount" class="tag muted" style="margin-left: 0.3rem"><UiIcon name="repeat" :size="12" /> {{ potFixedCount }} fijos</span></h2>
           <button type="button" class="small secondary" @click="editor.openNew('pot')">+ Añadir</button>
         </div>
         <ExpenseList
@@ -258,14 +289,14 @@ function deleteContribution(c: Contribution) {
           :category-by-id="data.categoryById.value"
           :name-of="nameOf"
           editable
-          empty-text="Ningún gasto del bote este mes."
+          empty-text="Ningún gasto de la cuenta conjunta este mes."
           @edit="editor.openEdit"
           @delete="deleteExpense"
         />
       </div>
     </template>
 
-    <!-- ===== Juntos ===== -->
+    <!-- ===== Huchas ===== -->
     <template v-else>
       <div class="section-title" style="margin-top: 0.2rem">
         <h2>Huchas en pareja</h2>
@@ -280,43 +311,13 @@ function deleteContribution(c: Contribution) {
         :saved="data.savedByGoal.value[g.id] ?? 0"
         :name-of="nameOf"
         :current-user-id="userId"
+        :members="state.members"
         editable
         @edit="editGoal"
         @delete="deleteGoal"
-        @contribute="contribute"
+        @move="moveGoal"
         @delete-contribution="deleteContribution"
       />
-
-      <template v-if="partner">
-        <div class="section-title">
-          <h2>Lo que {{ partner.display_name }} comparte contigo</h2>
-        </div>
-        <p class="muted">Gastos y huchas personales que ha hecho públicos. Solo lectura.</p>
-        <div class="card">
-          <MonthPicker v-model="month" />
-          <div class="tiny" style="margin-bottom: 0.4rem">
-            Gastos públicos: <strong class="tnum">{{ formatEur(sum(partnerPublicExpenses.map((e) => e.amount))) }}</strong>
-          </div>
-          <ExpenseList
-            :expenses="partnerPublicExpenses"
-            :category-by-id="data.categoryById.value"
-            :name-of="nameOf"
-            :editable="false"
-            empty-text="No ha hecho público ningún gasto este mes."
-          />
-        </div>
-        <div v-if="partnerPublicGoals.length === 0" class="card flat empty">No ha hecho pública ninguna hucha.</div>
-        <GoalCard
-          v-for="g in partnerPublicGoals"
-          :key="g.id"
-          :goal="g"
-          :contributions="contributionsOf(g.id)"
-          :saved="data.savedByGoal.value[g.id] ?? 0"
-          :name-of="nameOf"
-          :current-user-id="userId"
-          :editable="false"
-        />
-      </template>
     </template>
 
     <SettleForm

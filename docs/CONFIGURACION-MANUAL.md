@@ -79,3 +79,11 @@ allowed" y la app mostrará *"Esta app es privada"*.
 - [ ] Apunta un gasto compartido y uno personal; comprueba desde la otra cuenta que
       el personal no se ve hasta que pulsas el candado.
 - [ ] Cuéntale a Claude el resultado, funcione o no.
+
+## 7. Instalar la app en el móvil (icono propio)
+
+- iPhone (Safari): abre https://jesusmorato.github.io/GasTitos/ → botón compartir →
+  "Añadir a pantalla de inicio". Se abre a pantalla completa con el icono de la hucha.
+- Android (Chrome): abre la dirección → menú ⋮ → "Instalar aplicación" o "Añadir a
+  pantalla de inicio".
+- Si ya la tenías añadida con el icono antiguo, bórrala y vuelve a añadirla.

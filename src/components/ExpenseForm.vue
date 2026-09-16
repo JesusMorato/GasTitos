@@ -55,20 +55,22 @@ function initialExact(): Record<string, number> {
 const kindOptions = computed(() => {
   const opts: Array<{ value: Kind; label: string }> = [{ value: 'personal', label: 'Personal' }]
   if (partner.value) opts.push({ value: 'shared', label: 'Repartido' })
-  opts.push({ value: 'pot', label: 'Bote' })
+  opts.push({ value: 'pot', label: 'Conjunta' })
   return opts
 })
 
 const splitOptions = computed<Array<{ value: SplitMode; label: string }>>(() => {
   const hh = me.value && partner.value ? `${Math.round(me.value.share_pct)}/${Math.round(partner.value.share_pct)}` : ''
+  const isHalf = Math.round(me.value?.share_pct ?? 50) === 50
   const other = props.members.find((m) => m.user_id !== paidBy.value)
-  return [
-    { value: 'household', label: `Hogar ${hh}` },
-    { value: 'equal', label: 'A medias' },
+  const opts: Array<{ value: SplitMode; label: string }> = [{ value: 'household', label: isHalf ? 'A medias' : `Hogar ${hh}` }]
+  if (!isHalf) opts.push({ value: 'equal', label: 'A medias' })
+  opts.push(
     { value: 'custom', label: 'Porcentaje' },
     { value: 'exact', label: 'Importes' },
     { value: 'other_only', label: `Solo ${other?.display_name ?? 'el otro'}` },
-  ]
+  )
+  return opts
 })
 
 const shares = computed<Share[]>(() =>
@@ -146,7 +148,7 @@ function submit() {
         <p class="help">
           <template v-if="kind === 'personal'">Solo tuyo. Privado salvo que lo hagas público.</template>
           <template v-else-if="kind === 'shared'">Lo paga uno con su dinero y se reparte.</template>
-          <template v-else>Pagado con la cuenta conjunta. No se reparte.</template>
+          <template v-else>Pagado con la cuenta conjunta. No se reparte: es dinero de los dos.</template>
         </p>
       </div>
 

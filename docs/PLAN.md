@@ -265,11 +265,11 @@ una: tests en verde, build correcto, push, documentación actualizada.
 | **1. Reparto real** ✅ 2026-09-15 | Porcentaje del hogar en Ajustes. Modos de reparto por gasto. `expense_shares`. Balance con signo. Botón Saldar + historial. | M | "Ana debe X a Luis" es correcto con repartos mixtos y se pone a cero al saldar. |
 | **2. Bote común** | Aportaciones, gastos del bote, saldo, esperado mensual por persona, donut del bote. | M | El saldo cuadra con aportaciones − gastos. |
 | **3. Mi mes real** ✅ 2026-09-16 | Yo → Resumen con el agregado (personal + mi parte + al bote). Donut y barras 6 meses. Chart.js. | M | La cifra del mes coincide con lo que sale de mi cuenta. |
-| **4. Ahorro v2** ⭐ | Huchas con emoji, tipos YNAB, plan mensual, proyección, sacar dinero, "este mes te toca X", gráfica real vs plan, barras 12 meses. | L | Un objetivo con fecha muestra plan y proyección correctos. |
-| **5. Recurrentes** | Reglas mensuales para gastos fijos, aportaciones al bote y a huchas. Ejecución al abrir la app. | M | El alquiler aparece solo el día 1. |
-| **6. Objetivos en pareja v2** | Barras por persona, plan repartido, estado por persona. | S | Se ve quién va por debajo del plan. |
+| **4. Ahorro v2** ⭐ ✅ 2026-09-16 (versión simple) | Huchas con emoji, tipos YNAB, plan mensual, proyección, sacar dinero, "este mes te toca X", gráfica real vs plan, barras 12 meses. | L | Un objetivo con fecha muestra plan y proyección correctos. |
+| **5. Recurrentes** ✅ 2026-09-16 | Reglas mensuales para gastos fijos, aportaciones al bote y a huchas. Ejecución al abrir la app. | M | El alquiler aparece solo el día 1. |
+| **6. Objetivos en pareja v2** ✅ 2026-09-16 (quién ha puesto qué) | Barras por persona, plan repartido, estado por persona. | S | Se ve quién va por debajo del plan. |
 | **7. Ingresos y presupuesto** | Ingresos privados, tasa de ahorro, "podrías ahorrar X", presupuestos por categoría con avisos. | M | Tasa de ahorro correcta; aviso al pasar el 80 %. |
-| **8. Calidad de vida** | PWA instalable con icono, modo oscuro, exportar CSV, navegación inferior con botón ➕. | M | Instalada en el móvil, funciona en oscuro. |
+| **8. Calidad de vida** ✅ parcial 2026-09-16 (instalable, icono, modo oscuro) | PWA instalable con icono, modo oscuro, exportar CSV, navegación inferior con botón ➕. | M | Instalada en el móvil, funciona en oscuro. |
 | **9. Extras** | Redondeo, reto 52 semanas, comentarios en gastos, login con Google. | S cada uno | A demanda. |
 
 Tamaños: S = una sesión corta, M = una sesión larga o dos, L = dos o tres.
@@ -376,3 +376,13 @@ sustituir en `CLAUDE.md`.
 Sí tienen cuenta conjunta. En la interfaz: pestaña "Conjunta", "Gasto de la cuenta
 conjunta", "Límite de la cuenta conjunta". Además, "Mi mes" debe incluir el porcentaje
 del hogar de lo pagado con la cuenta conjunta (pendiente de confirmar).
+
+### 8.4 Decisiones del 2026-09-16
+
+- Mi mes incluye mi porcentaje de la cuenta conjunta. Hecho.
+- Gastos fijos sin día del mes: al pasar de mes ya figuran; los de importe variable se piden. Hecho.
+- Huchas simples: un solo tipo, meter y sacar, objetivo y fecha opcionales. Fuera "saldo a mantener", retos y redondeo. Hecho.
+- Pestaña Juntos pasa a Huchas; lo que comparte la pareja, plegado en Repartidos. Hecho.
+- Logo: dirección B (hucha). Integrado como icono, favicon y marca.
+- Google oculto hasta configurarlo. Hecho.
+- Pendiente de decidir: ingresos (tasa de ahorro). Pendiente de hacer: exportar CSV, comentarios.

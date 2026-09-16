@@ -15,6 +15,28 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-16 · v0.4 — gastos fijos, huchas simples, cuenta conjunta e identidad.**
+
+- Migración `0006_fijos_y_huchas.sql`: tablas `recurring_expenses` y `recurring_runs`,
+  funciones `run_recurring`, `resolve_pending`, `skip_pending`; huchas con objetivo
+  opcional y movimientos de salida.
+- **Gastos fijos** (Ajustes → Gastos fijos): sin día del mes. Al entrar en un mes nuevo,
+  los de importe fijo se apuntan solos (día 1) y los variables aparecen como
+  "pendientes" en la vista que toque (Yo, Repartidos o Conjunta) con el importe
+  anterior sugerido. Frecuencia cada 1/2/3/6/12 meses. Se pueden pausar.
+- **Huchas simples**: meter y sacar, objetivo y fecha opcionales, "te tocan X €/mes" y
+  "a tu ritmo llegas en…" (media de los últimos 3 meses), quién ha puesto qué en las
+  comunes. La pestaña Juntos pasa a ser **Huchas**; lo que la pareja hace público
+  queda plegado al final de Repartidos.
+- **Cuenta conjunta** sustituye a "bote" en toda la interfaz. **Mi mes** = personal +
+  repartido + mi porcentaje de la conjunta (también el donut, el límite y las barras).
+- **Selector de mes** único en la barra superior (toca el nombre del mes para volver
+  a hoy).
+- **Identidad**: logo B (hucha) como icono de la app, favicon y marca; manifest para
+  instalar en el móvil (`public/`, `scripts/make-icons.mjs`). Iconos de trazo en toda
+  la interfaz (`lib/uiIcons.ts`, `components/UiIcon.vue`); sin emojis salvo los que
+  elige el usuario. Google oculto hasta configurarlo (`GOOGLE_LOGIN` en LoginView).
+
 **2026-09-16 · v0.3 — fase 3: gráficas y límite mensual.**
 
 - Migración `0005_presupuestos.sql`: tabla `budgets` y función `set_budget()`.

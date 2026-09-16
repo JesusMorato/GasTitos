@@ -322,3 +322,65 @@ export function budgetStatus(spent: number, limit: number, day: number, days: nu
   const state: BudgetState = spent > limit + 0.005 ? 'exceeded' : spent > paceAllowed + 0.005 ? 'over_pace' : 'under'
   return { spent: round2(spent), limit, remaining, exceeded, daysLeft, perDay, paceAllowed, pct, state }
 }
+
+// ------------------------------------------------------------
+// Huchas: plan mensual y proyección
+// ------------------------------------------------------------
+
+/** Suma n meses a un YYYY-MM. */
+export function addMonths(yyyymm: string, n: number): string {
+  const [y, m] = yyyymm.split('-').map(Number)
+  const d = new Date(y, m - 1 + n, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+/** Meses enteros que quedan desde el mes de hoy hasta el mes de la fecha (mínimo 1 si la fecha no ha pasado). */
+export function monthsUntil(deadlineIso: string, today: string = todayIso()): number {
+  const [y1, m1] = monthOf(today).split('-').map(Number)
+  const [y2, m2] = monthOf(deadlineIso).split('-').map(Number)
+  const diff = (y2 - y1) * 12 + (m2 - m1)
+  if (deadlineIso < today) return 0
+  return Math.max(1, diff)
+}
+
+/** Cuánto habría que poner cada mes para llegar al objetivo a tiempo. */
+export function monthlyPlan(remaining: number, monthsLeft: number): number {
+  if (remaining <= 0) return 0
+  return round2(remaining / Math.max(1, monthsLeft))
+}
+
+export interface Movement {
+  contributed_on: string
+  amount: number
+  direction: 'in' | 'out'
+}
+
+/** Neto (entradas − salidas) por mes. */
+export function netByMonth(moves: Movement[], months: string[]): number[] {
+  const map = new Map<string, number>()
+  for (const mv of moves) {
+    const k = monthOf(mv.contributed_on)
+    const v = mv.direction === 'out' ? -Number(mv.amount) : Number(mv.amount)
+    map.set(k, round2((map.get(k) ?? 0) + v))
+  }
+  return months.map((m) => map.get(m) ?? 0)
+}
+
+/** Saldo de una hucha: entradas − salidas. */
+export function goalBalance(moves: Movement[]): number {
+  return round2(moves.reduce((a, mv) => a + (mv.direction === 'out' ? -Number(mv.amount) : Number(mv.amount)), 0))
+}
+
+/**
+ * Mes en el que se llegaría al objetivo al ritmo medio de los últimos 3 meses.
+ * Devuelve null si el ritmo es cero o negativo.
+ */
+export function projectedMonth(remaining: number, moves: Movement[], today: string = todayIso()): string | null {
+  if (remaining <= 0) return monthOf(today)
+  const cur = monthOf(today)
+  const last3 = lastMonths(cur, 3)
+  const net = netByMonth(moves, last3)
+  const rate = net.reduce((a, b) => a + b, 0) / 3
+  if (rate <= 0) return null
+  return addMonths(cur, Math.ceil(remaining / rate))
+}

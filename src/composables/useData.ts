@@ -2,8 +2,15 @@
 // Supabase ya filtra por RLS: solo llegan las filas que el usuario puede ver.
 import { computed, ref } from 'vue'
 import { supabase } from '../supabase'
-import type { Budget, BudgetScope, Category, Contribution, Expense, ExpenseShare, SavingsGoal, Settlement, SplitMode, Funding } from '../types'
-import { round2, type Share } from '../lib/money'
+import type {
+  Budget, BudgetScope, Category, Contribution, Expense, ExpenseShare, RecurringExpense, RecurringRun,
+  SavingsGoal, Settlement, SplitMode, Funding,
+} from '../types'
+import { goalBalance, monthOf, todayIso, type Share } from '../lib/money'
+
+const recurring = ref<RecurringExpense[]>([])
+const runs = ref<RecurringRun[]>([])
+let recurringRanFor = ''
 
 const expenses = ref<Expense[]>([])
 const shares = ref<ExpenseShare[]>([])
@@ -34,7 +41,7 @@ async function loadAll() {
   loading.value = true
   error.value = null
   try {
-    const [e, s, c, st, g, gc, b] = await Promise.all([
+    const [e, s, c, st, g, gc, b, rc, rr] = await Promise.all([
       supabase.from('expenses').select('*').order('spent_on', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('expense_shares').select('*'),
       supabase.from('categories').select('*').order('sort_order', { ascending: true }).order('name', { ascending: true }),
@@ -42,14 +49,22 @@ async function loadAll() {
       supabase.from('savings_goals').select('*').order('created_at', { ascending: true }),
       supabase.from('goal_contributions').select('*').order('contributed_on', { ascending: false }),
       supabase.from('budgets').select('*'),
+      supabase.from('recurring_expenses').select('*').order('created_at', { ascending: true }),
+      supabase.from('recurring_runs').select('*'),
     ])
-    fail(e.error); fail(s.error); fail(c.error); fail(st.error); fail(g.error); fail(gc.error); fail(b.error)
+    fail(e.error); fail(s.error); fail(c.error); fail(st.error); fail(g.error); fail(gc.error); fail(b.error); fail(rc.error); fail(rr.error)
     budgets.value = (b.data ?? []).map((r) => num(r, ['monthly_limit'])) as Budget[]
+    recurring.value = ((rc.data ?? []) as Record<string, unknown>[]).map((r) => ({
+      ...r,
+      amount: r.amount == null ? null : Number(r.amount),
+      custom_pct: r.custom_pct == null ? null : Number(r.custom_pct),
+    })) as unknown as RecurringExpense[]
+    runs.value = (rr.data ?? []) as RecurringRun[]
     expenses.value = (e.data ?? []).map((r) => num(r, ['amount'])) as Expense[]
     shares.value = (s.data ?? []).map((r) => num(r, ['amount'])) as ExpenseShare[]
     categories.value = (c.data ?? []) as Category[]
     settlements.value = (st.data ?? []).map((r) => num(r, ['amount'])) as Settlement[]
-    goals.value = (g.data ?? []).map((r) => num(r, ['target_amount'])) as SavingsGoal[]
+    goals.value = ((g.data ?? []) as Record<string, unknown>[]).map((r) => ({ ...r, target_amount: r.target_amount == null ? null : Number(r.target_amount) })) as unknown as SavingsGoal[]
     contributions.value = (gc.data ?? []).map((r) => num(r, ['amount'])) as Contribution[]
     loaded.value = true
   } finally {
@@ -75,12 +90,37 @@ export type GoalInput = Pick<SavingsGoal, 'name' | 'emoji' | 'color' | 'target_a
   is_public?: boolean
 }
 
+export type RecurringInput = Pick<
+  RecurringExpense,
+  'name' | 'category_id' | 'amount' | 'kind' | 'split_mode' | 'custom_pct' | 'every_n_months' | 'start_month' | 'user_id'
+>
+
 export function useData() {
+  /** Saldo de cada hucha: entradas − salidas. */
   const savedByGoal = computed<Record<string, number>>(() => {
+    const byGoal: Record<string, Contribution[]> = {}
+    for (const c of contributions.value) (byGoal[c.goal_id] ??= []).push(c)
     const map: Record<string, number> = {}
-    for (const c of contributions.value) map[c.goal_id] = round2((map[c.goal_id] ?? 0) + c.amount)
+    for (const [id, list] of Object.entries(byGoal)) map[id] = goalBalance(list)
     return map
   })
+
+  /**
+   * Procesa los gastos fijos hasta el mes actual (una vez por sesión y mes) y
+   * luego carga todo. Los fijos de importe fijo quedan apuntados; los variables,
+   * pendientes.
+   */
+  async function syncRecurring() {
+    const m = monthOf(todayIso())
+    if (recurringRanFor === m) return
+    recurringRanFor = m
+    const { error: e } = await supabase.rpc('run_recurring', { p_month: m })
+    if (e) {
+      // No bloquea la app: se reintenta en la próxima carga.
+      recurringRanFor = ''
+      console.warn('run_recurring', e.message)
+    }
+  }
 
   const sharesByExpense = computed<Record<string, Share[]>>(() => {
     const map: Record<string, Share[]> = {}
@@ -100,8 +140,62 @@ export function useData() {
   )
 
   function ensureLoaded() {
-    if (!loaded.value && !loading.value) return loadAll().catch(() => {})
+    if (!loaded.value && !loading.value) return syncRecurring().then(loadAll).catch(() => {})
     return Promise.resolve()
+  }
+
+  // ---- gastos fijos ------------------------------------------
+  const pendingRuns = computed(() =>
+    runs.value
+      .filter((r) => r.status === 'pending')
+      .map((r) => ({ run: r, recurring: recurring.value.find((x) => x.id === r.recurring_id) }))
+      .filter((x): x is { run: RecurringRun; recurring: RecurringExpense } => !!x.recurring),
+  )
+
+  /** Último importe apuntado para un gasto fijo (sugerencia para los variables). */
+  function lastAmountOf(recurringId: string): number | null {
+    const created = runs.value
+      .filter((r) => r.recurring_id === recurringId && r.status === 'created' && r.expense_id)
+      .sort((a, b) => (a.month < b.month ? 1 : -1))
+    for (const r of created) {
+      const x = expenses.value.find((e) => e.id === r.expense_id)
+      if (x) return x.amount
+    }
+    return null
+  }
+
+  async function addRecurring(householdId: string, input: RecurringInput) {
+    const { error: e } = await supabase.from('recurring_expenses').insert({ ...input, household_id: householdId })
+    fail(e)
+    recurringRanFor = ''
+    await syncRecurring()
+    await loadAll()
+  }
+
+  async function updateRecurring(id: string, patch: Partial<RecurringInput> & { active?: boolean }) {
+    const { error: e } = await supabase.from('recurring_expenses').update(patch).eq('id', id)
+    fail(e)
+    recurringRanFor = ''
+    await syncRecurring()
+    await loadAll()
+  }
+
+  async function deleteRecurring(id: string) {
+    const { error: e } = await supabase.from('recurring_expenses').delete().eq('id', id)
+    fail(e)
+    await loadAll()
+  }
+
+  async function resolvePending(runId: string, amount: number) {
+    const { error: e } = await supabase.rpc('resolve_pending', { p_run: runId, p_amount: amount })
+    fail(e)
+    await loadAll()
+  }
+
+  async function skipPending(runId: string) {
+    const { error: e } = await supabase.rpc('skip_pending', { p_run: runId })
+    fail(e)
+    await loadAll()
   }
 
   // ---- gastos ------------------------------------------------
@@ -182,10 +276,12 @@ export function useData() {
     await loadAll()
   }
 
-  async function addContribution(goalId: string, userId: string, amount: number, contributed_on: string, note: string | null) {
+  async function addContribution(
+    goalId: string, userId: string, amount: number, contributed_on: string, note: string | null, direction: 'in' | 'out' = 'in',
+  ) {
     const { error: e } = await supabase
       .from('goal_contributions')
-      .insert({ goal_id: goalId, user_id: userId, amount, contributed_on, note })
+      .insert({ goal_id: goalId, user_id: userId, amount, contributed_on, note, direction })
     fail(e)
     await loadAll()
   }
@@ -211,8 +307,9 @@ export function useData() {
   }
 
   return {
-    expenses, shares, categories, settlements, goals, contributions, budgets, loading, loaded, error,
+    expenses, shares, categories, settlements, goals, contributions, budgets, recurring, runs, loading, loaded, error,
     savedByGoal, sharesByExpense, categoryById, expensesWithShares, potBudget, myBudget, setBudget,
+    pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
     loadAll, ensureLoaded,
     saveExpense, setExpensePublic, deleteExpense,
     addCategory, updateCategory, deleteCategory,

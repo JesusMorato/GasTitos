@@ -46,6 +46,7 @@ export interface Expense {
   is_public: boolean
   funding: Funding
   split_mode: SplitMode
+  recurring_id: string | null
   created_at: string
 }
 
@@ -67,7 +68,7 @@ export interface SavingsGoal {
   name: string
   emoji: string
   color: string
-  target_amount: number
+  target_amount: number | null
   deadline: string | null
   is_shared: boolean
   is_public: boolean
@@ -79,6 +80,7 @@ export interface Contribution {
   goal_id: string
   user_id: string
   amount: number
+  direction: 'in' | 'out'
   contributed_on: string
   note: string | null
   created_at: string
@@ -107,4 +109,34 @@ export interface Budget {
   user_id: string | null
   scope: BudgetScope
   monthly_limit: number
+}
+
+export type RecurringKind = 'personal' | 'shared' | 'pot'
+
+/** Gasto fijo: se apunta solo cada N meses (importe fijo) o queda pendiente (variable). */
+export interface RecurringExpense {
+  id: string
+  household_id: string
+  user_id: string
+  name: string
+  category_id: string
+  /** null = importe variable */
+  amount: number | null
+  kind: RecurringKind
+  split_mode: 'household' | 'equal' | 'custom' | 'other_only'
+  custom_pct: number | null
+  every_n_months: number
+  start_month: string
+  active: boolean
+  created_at: string
+}
+
+export interface RecurringRun {
+  id: string
+  recurring_id: string
+  household_id: string
+  month: string
+  status: 'pending' | 'created' | 'skipped'
+  expense_id: string | null
+  created_at: string
 }

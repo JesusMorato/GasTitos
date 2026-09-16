@@ -266,3 +266,44 @@ describe('budgetStatus', () => {
     expect(s.perDay).toBe(100)
   })
 })
+
+import { addMonths, goalBalance, monthlyPlan, monthsUntil, netByMonth, projectedMonth } from './money'
+
+describe('huchas', () => {
+  it('addMonths cruza el año', () => {
+    expect(addMonths('2026-11', 3)).toBe('2027-02')
+  })
+  it('monthsUntil cuenta meses enteros y nunca menos de 1 si no ha pasado', () => {
+    expect(monthsUntil('2027-06-15', '2026-09-16')).toBe(9)
+    expect(monthsUntil('2026-09-30', '2026-09-16')).toBe(1)
+    expect(monthsUntil('2026-08-01', '2026-09-16')).toBe(0)
+  })
+  it('monthlyPlan reparte lo que falta', () => {
+    expect(monthlyPlan(900, 9)).toBe(100)
+    expect(monthlyPlan(0, 9)).toBe(0)
+    expect(monthlyPlan(100, 0)).toBe(100)
+  })
+  it('goalBalance resta las salidas', () => {
+    expect(goalBalance([
+      { contributed_on: '2026-09-01', amount: 100, direction: 'in' },
+      { contributed_on: '2026-09-10', amount: 30, direction: 'out' },
+    ])).toBe(70)
+  })
+  it('netByMonth', () => {
+    expect(netByMonth([
+      { contributed_on: '2026-08-01', amount: 100, direction: 'in' },
+      { contributed_on: '2026-09-01', amount: 100, direction: 'in' },
+      { contributed_on: '2026-09-10', amount: 40, direction: 'out' },
+    ], ['2026-07', '2026-08', '2026-09'])).toEqual([0, 100, 60])
+  })
+  it('projectedMonth al ritmo medio de 3 meses', () => {
+    const moves = [
+      { contributed_on: '2026-07-01', amount: 100, direction: 'in' as const },
+      { contributed_on: '2026-08-01', amount: 100, direction: 'in' as const },
+      { contributed_on: '2026-09-01', amount: 100, direction: 'in' as const },
+    ]
+    expect(projectedMonth(250, moves, '2026-09-16')).toBe('2026-12')
+    expect(projectedMonth(0, moves, '2026-09-16')).toBe('2026-09')
+    expect(projectedMonth(250, [], '2026-09-16')).toBeNull()
+  })
+})

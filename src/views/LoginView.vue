@@ -2,6 +2,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase, authRedirectUrl } from '../supabase'
+import Logo from '../components/Logo.vue'
+
+// Se activa cuando el login con Google esté configurado en Supabase
+// (ver docs/CONFIGURACION-MANUAL.md, punto 5).
+const GOOGLE_LOGIN = false
 
 const router = useRouter()
 const email = ref('')
@@ -44,7 +49,7 @@ async function loginGoogle() {
 
 <template>
   <div class="space-yo auth-card card">
-    <div style="font-size: 2.2rem; margin-bottom: 0.3rem">💸</div>
+    <div style="margin-bottom: 0.4rem"><Logo :size="72" /></div>
     <h1>Entrar en GasTitos</h1>
     <p class="muted">Gastos y ahorro para dos. Solo pueden entrar las cuentas dadas de alta.</p>
 
@@ -61,8 +66,9 @@ async function loginGoogle() {
       <button type="submit" class="block" :disabled="busy">Entrar</button>
     </form>
 
-    <div class="row" style="margin: 1rem 0; justify-content: center"><span class="tiny">o</span></div>
-
-    <button type="button" class="secondary block" :disabled="busy" @click="loginGoogle">Entrar con Google</button>
+    <template v-if="GOOGLE_LOGIN">
+      <div class="row" style="margin: 1rem 0; justify-content: center"><span class="tiny">o</span></div>
+      <button type="button" class="secondary block" :disabled="busy" @click="loginGoogle">Entrar con Google</button>
+    </template>
   </div>
 </template>
