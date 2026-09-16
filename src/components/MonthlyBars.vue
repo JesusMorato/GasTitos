@@ -13,6 +13,8 @@ const props = defineProps<{
   /** Índice de la barra "actual" (se resalta). */
   highlight?: number
   height?: number
+  /** Apilar las series (por defecto van una al lado de la otra). */
+  stacked?: boolean
 }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -32,10 +34,12 @@ useChart(
         type: 'bar' as const,
         label: d.label,
         data: d.values,
-        backgroundColor: d.values.map((_, i) => (props.highlight === i ? color : withAlpha(color, 0.55))),
-        borderRadius: 6,
-        borderSkipped: false,
-        maxBarThickness: 36,
+        backgroundColor: props.datasets.length > 1 ? color : d.values.map((_, i) => (props.highlight === i ? color : withAlpha(color, 0.55))),
+        borderRadius: 5,
+        borderSkipped: 'bottom',
+        maxBarThickness: props.datasets.length > 1 ? 22 : 36,
+        categoryPercentage: 0.7,
+        barPercentage: props.datasets.length > 1 ? 0.85 : 0.9,
       }
     })
     if (props.average && n > 1) {
@@ -60,13 +64,13 @@ useChart(
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: {
-            stacked: props.datasets.length > 1,
+            stacked: !!props.stacked,
             grid: { display: false },
             border: { display: false },
             ticks: { color: t.ink2, font: { family: t.font, size: 11 } },
           },
           y: {
-            stacked: props.datasets.length > 1,
+            stacked: !!props.stacked,
             beginAtZero: true,
             grid: { color: t.line },
             border: { display: false },

@@ -87,6 +87,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 #app { min-height: 100dvh; display: flex; flex-direction: column; }
+html, body { overflow-x: hidden; max-width: 100vw; }
+.stack > * { min-width: 0; }
+.card { min-width: 0; max-width: 100%; }
 a { color: var(--accent); }
 h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; line-height: 1.2; letter-spacing: -0.01em; text-wrap: balance; }
 h1 { font-size: 1.5rem; font-weight: 700; }
@@ -312,8 +315,10 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 0.9rem 0; }
 .auth-card { max-width: 420px; margin: 8vh auto 0; }
 
 /* ---------- gráficas ---------- */
-.chart-box { position: relative; width: 100%; }
-.chart-box canvas { max-width: 100%; }
+/* min-width: 0 y overflow: hidden evitan que el canvas impida encoger la tarjeta
+   (causa típica del scroll horizontal en móvil). */
+.chart-box { position: relative; width: 100%; min-width: 0; overflow: hidden; }
+.chart-box canvas { max-width: 100% !important; }
 .legend-line {
   display: inline-block; width: 18px; height: 0; vertical-align: middle; margin-right: 0.25rem;
   border-top: 2px dashed var(--c, var(--ink-3));
@@ -321,12 +326,13 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 0.9rem 0; }
 }
 .legend-line[style*='--dash: 0'] { border-top-style: solid; border-image: none; }
 .legend-line[style*='--dash: 2px'] { --dash-a: 2px; --dash-b: 6px; }
-.donut-legend { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 0.8rem; font-size: 0.88rem; }
-.donut-legend li { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.donut-legend { list-style: none; margin: 0.9rem 0 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: 0; font-size: 0.92rem; }
+.donut-legend li { display: flex; align-items: center; gap: 0.55rem; min-width: 0; padding: 0.45rem 0; border-top: 1px solid var(--line); }
+.donut-legend li:first-child { border-top: 0; }
+@media (min-width: 520px) { .donut-legend { grid-template-columns: 1fr 1fr; column-gap: 1.5rem; } .donut-legend li:nth-child(2) { border-top: 0; } }
 .donut-legend .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--dot); }
 .donut-legend .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .donut-legend .val { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
-@media (max-width: 380px) { .donut-legend { grid-template-columns: 1fr; } }
 .dot-legend { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 0.2rem; }
 
 /* ---------- gastos fijos pendientes ---------- */
@@ -336,3 +342,8 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 0.9rem 0; }
 button .ui-icon { margin-right: 0.15rem; }
 .check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.92rem; color: var(--ink); font-weight: 500; }
 .check input { width: auto; }
+
+/* Desglose bajo la cifra grande de "Mi mes" */
+.hero-split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin-top: 0.8rem; padding-top: 0.7rem; border-top: 1px solid color-mix(in srgb, var(--on-accent) 25%, transparent); }
+.hero-split .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
+.hero-split .value { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

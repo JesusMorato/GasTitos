@@ -133,7 +133,11 @@ function deleteContribution(c: Contribution) {
     <div class="card accent">
       <div class="tiny" style="text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700">Mi mes</div>
       <div class="hero-number" style="margin: 0.2rem 0">{{ formatEur(totalMonth) }}</div>
-      <div class="muted tnum">Personal {{ formatEur(totalPersonal) }} · Repartido {{ formatEur(myShare) }} · Conjunta {{ formatEur(myPot) }}</div>
+      <div class="hero-split">
+        <div><div class="label">Personal</div><div class="value">{{ formatEur(totalPersonal) }}</div></div>
+        <div><div class="label">Repartido</div><div class="value">{{ formatEur(myShare) }}</div></div>
+        <div><div class="label">Conjunta</div><div class="value">{{ formatEur(myPot) }}</div></div>
+      </div>
     </div>
 
     <PendingRecurring :items="myPending" :category-by-id="data.categoryById.value" :last-amount-of="data.lastAmountOf" @resolve="(id, a) => run(() => data.resolvePending(id, a))" @skip="(id) => run(() => data.skipPending(id))" />
