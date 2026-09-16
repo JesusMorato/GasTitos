@@ -337,6 +337,12 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 0.9rem 0; }
 
 /* ---------- gastos fijos pendientes ---------- */
 .card.pending { border-left: 4px solid var(--warn); }
+.pending-item { display: block !important; }
+.pending-head { display: flex; gap: 0.75rem; align-items: center; min-width: 0; }
+.pending-form { display: flex; gap: 0.4rem; align-items: center; margin-top: 0.5rem; min-width: 0; }
+.pending-form .amount-input { flex: 1; min-width: 0; }
+.pending-form .amount-input input { font-size: 1.15rem; padding: 0.45rem 1.8rem 0.45rem 0.6rem; }
+.pending-form button { flex: none; }
 .ui-icon { flex: none; vertical-align: middle; }
 .emoji-badge .ui-icon { color: var(--badge, var(--accent)); }
 button .ui-icon { margin-right: 0.15rem; }

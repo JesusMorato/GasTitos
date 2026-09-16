@@ -33,24 +33,27 @@ function submit(runId: string) {
     </div>
     <p class="tiny" style="margin-bottom: 0.5rem">Toca poner el importe de este mes. Se sugiere el del mes anterior.</p>
     <ul class="list">
-      <li v-for="it in items" :key="it.run.id" style="flex-wrap: wrap">
-        <CategoryIcon :icon="categoryById[it.recurring.category_id]?.icon" :emoji="categoryById[it.recurring.category_id]?.emoji" :color="categoryById[it.recurring.category_id]?.color" />
-        <div class="grow">
-          <div class="ellipsis"><strong>{{ it.recurring.name }}</strong></div>
-          <div class="tiny">{{ formatMonth(it.run.month) }}<span v-if="lastAmountOf(it.recurring.id) != null"> · anterior {{ formatEur(lastAmountOf(it.recurring.id)!) }}</span></div>
+      <li v-for="it in items" :key="it.run.id" class="pending-item">
+        <div class="pending-head">
+          <CategoryIcon :icon="categoryById[it.recurring.category_id]?.icon" :emoji="categoryById[it.recurring.category_id]?.emoji" :color="categoryById[it.recurring.category_id]?.color" />
+          <div class="grow">
+            <div class="ellipsis"><strong>{{ it.recurring.name }}</strong></div>
+            <div class="tiny">{{ formatMonth(it.run.month) }}<span v-if="lastAmountOf(it.recurring.id) != null"> · anterior {{ formatEur(lastAmountOf(it.recurring.id)!) }}</span></div>
+          </div>
         </div>
-        <form class="row" style="gap: 0.35rem; flex: none" @submit.prevent="submit(it.run.id)">
-          <input
-            :value="draft(it.run.id, it.recurring.id)"
-            type="number"
-            step="0.01"
-            min="0.01"
-            inputmode="decimal"
-            placeholder="€"
-            aria-label="Importe"
-            style="width: 96px"
-            @input="drafts[it.run.id] = Number(($event.target as HTMLInputElement).value)"
-          />
+        <form class="pending-form" @submit.prevent="submit(it.run.id)">
+          <div class="amount-input grow">
+            <input
+              :value="draft(it.run.id, it.recurring.id)"
+              type="number"
+              step="0.01"
+              min="0.01"
+              inputmode="decimal"
+              placeholder="0,00"
+              aria-label="Importe"
+              @input="drafts[it.run.id] = Number(($event.target as HTMLInputElement).value)"
+            />
+          </div>
           <button type="submit" class="small">Apuntar</button>
           <button type="button" class="ghost small" title="Este mes no" @click="emit('skip', it.run.id)">Saltar</button>
         </form>
