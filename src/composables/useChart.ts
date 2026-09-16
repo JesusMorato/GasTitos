@@ -3,7 +3,7 @@
 // las gráficas de la app son pequeñas.
 import { onBeforeUnmount, onMounted, watch, type Ref } from 'vue'
 import type { ChartConfiguration, ChartType } from 'chart.js'
-import { Chart } from '../lib/charts'
+import { Chart, installTooltipDismiss } from '../lib/charts'
 
 export function useChart<T extends ChartType>(
   canvas: Ref<HTMLCanvasElement | null>,
@@ -21,6 +21,7 @@ export function useChart<T extends ChartType>(
   }
 
   onMounted(() => {
+    installTooltipDismiss()
     render()
     mq?.addEventListener('change', render)
   })

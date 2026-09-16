@@ -347,3 +347,8 @@ button .ui-icon { margin-right: 0.15rem; }
 .hero-split { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; margin-top: 0.8rem; padding-top: 0.7rem; border-top: 1px solid color-mix(in srgb, var(--on-accent) 25%, transparent); }
 .hero-split .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: color-mix(in srgb, var(--on-accent) 75%, transparent); }
 .hero-split .value { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Marquee: título de gasto que se desplaza al mantener pulsado */
+.marquee { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.marquee .marquee-inner { display: inline-block; will-change: transform; }
+.marquee.marquee-on { text-overflow: clip; }

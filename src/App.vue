@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSession } from './composables/useSession'
 import { useData, type ExpenseInput } from './composables/useData'
@@ -10,6 +10,7 @@ import QuickAdd from './components/QuickAdd.vue'
 import ExpenseForm from './components/ExpenseForm.vue'
 import UiIcon from './components/UiIcon.vue'
 import Logo from './components/Logo.vue'
+import { installSwipe } from './lib/swipe'
 
 const { state, partner } = useSession()
 const data = useData()
@@ -19,6 +20,17 @@ const router = useRouter()
 const { month, shift, reset, isCurrent } = useMonth()
 
 const inApp = computed(() => !!state.user && !!state.household && !state.recovery)
+
+// Deslizar: izquierda → Pareja, derecha → Yo (solo entre esas dos vistas).
+let removeSwipe: (() => void) | null = null
+onMounted(() => {
+  removeSwipe = installSwipe((dir) => {
+    if (!inApp.value || editor.state.formOpen || editor.state.quickOpen) return
+    if (dir === 'left' && route.name === 'personal') router.push({ name: 'couple' })
+    if (dir === 'right' && route.name === 'couple') router.push({ name: 'personal' })
+  })
+})
+onBeforeUnmount(() => removeSwipe?.())
 
 // Al llegar desde el email de recuperación, la app manda a "nueva contraseña".
 watch(() => state.recovery, (r) => { if (r) router.push({ name: 'new-password' }) })

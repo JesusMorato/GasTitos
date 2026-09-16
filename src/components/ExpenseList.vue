@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Category, Expense } from '../types'
 import { describeSplit, formatDate, formatEur, type Share } from '../lib/money'
 import CategoryIcon from './CategoryIcon.vue'
+import { vMarquee } from '../lib/marquee'
 
 type Row = Expense & { shares: Share[] }
 
@@ -91,9 +92,8 @@ onBeforeUnmount(() => {
         :color="categoryById[x.category_id]?.color"
       />
       <div class="grow">
-        <div class="ellipsis">
-          <strong>{{ x.description || categoryById[x.category_id]?.name || 'Gasto' }}</strong>
-          <span v-if="x.description" class="muted"> · {{ categoryById[x.category_id]?.name }}</span>
+        <div v-marquee class="ellipsis marquee">
+          <span class="marquee-inner"><strong>{{ x.description || categoryById[x.category_id]?.name || 'Gasto' }}</strong><span v-if="x.description" class="muted"> · {{ categoryById[x.category_id]?.name }}</span></span>
         </div>
         <div class="tiny">
           {{ formatDate(x.spent_on) }}

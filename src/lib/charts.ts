@@ -45,3 +45,25 @@ export function eurTick(v: number | string): string {
   if (Math.abs(n) >= 1000) return `${Math.round(n / 100) / 10}k €`
   return `${Math.round(n)} €`
 }
+
+// Los globos (tooltips) de Chart.js se quedan abiertos en móvil hasta tocar otra
+// gráfica. Al tocar en cualquier otro sitio, se cierran todos.
+let dismissInstalled = false
+export function installTooltipDismiss() {
+  if (dismissInstalled || typeof document === 'undefined') return
+  dismissInstalled = true
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      const target = e.target as HTMLElement | null
+      if (target?.closest('canvas')) return
+      for (const c of Object.values(Chart.instances)) {
+        if (!c.tooltip || c.getActiveElements().length === 0) continue
+        c.setActiveElements([])
+        c.tooltip.setActiveElements([], { x: 0, y: 0 })
+        c.update('none')
+      }
+    },
+    { passive: true },
+  )
+}
