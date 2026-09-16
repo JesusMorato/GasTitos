@@ -259,7 +259,7 @@ function deleteContribution(c: Contribution) {
       <div class="card">
         <template v-if="potByCategory.length">
           <DonutChart :items="potDonut" :total="potTotal" caption="conjunta" />
-          <ul class="donut-legend">
+          <ul class="donut-legend" :class="{ scrolling: potByCategory.length > 5 }">
             <li v-for="c in potByCategory" :key="c.key" :style="{ '--dot': data.categoryById.value[c.key]?.color }">
               <span class="dot" />
               <span class="name"><CategoryIcon variant="inline" :icon="data.categoryById.value[c.key]?.icon" :emoji="data.categoryById.value[c.key]?.emoji" :color="data.categoryById.value[c.key]?.color" />{{ data.categoryById.value[c.key]?.name }}</span>
