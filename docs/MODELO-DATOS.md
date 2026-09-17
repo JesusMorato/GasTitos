@@ -80,8 +80,7 @@ defecto al crear el hogar. Los dos miembros pueden editarlas. No se puede borrar
 categoría con gastos (FK restrict).
 
 `icon` (añadido en 0004) es la clave de un icono del juego propio de GasTitos
-(`casa`, `comida`, `transporte`, `ocio`, `salud`, `ropa`, `regalos`, `viajes`,
-`suscripciones`, `otros`; ver `src/lib/icons.ts`). Si es `null`, la app dibuja el
+(`casa`, `comida`, `luz`, `super`, `coche`…; lista completa en `src/lib/icons.ts`). Si es `null`, la app dibuja el
 `emoji`. Las 10 categorías de serie llevan icono y el color de la paleta que le
 corresponde a cada uno.
 

@@ -104,9 +104,12 @@ async function saveExpense(input: ExpenseInput) {
   position: fixed; left: 50%; bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom)); transform: translateX(-50%);
   background: var(--ink); color: var(--bg); padding: 0.6rem 1rem; border-radius: 999px; font-size: 0.9rem; font-weight: 600;
   box-shadow: var(--shadow); z-index: 60; max-width: calc(100% - 32px);
+  /* El aviso no debe tapar los toques: lo de debajo sigue siendo pulsable. */
+  pointer-events: none;
 }
 .topbar .btn.icon { text-decoration: none; }
 .brand { display: inline-flex; align-items: center; gap: 0.35rem; }
 .monthrow { max-width: 680px; margin: 0 auto; padding: 0 8px 6px; display: flex; align-items: center; justify-content: center; gap: 0.25rem; }
-.month-label { font-family: var(--font-display); font-weight: 600; font-size: 1rem; color: var(--ink); min-width: 170px; justify-content: center; }
+.month-label { font-family: var(--font-display); font-weight: 600; font-size: 1rem; color: var(--ink); min-width: 170px; min-height: 40px; justify-content: center; }
+.monthrow button.icon { font-size: 1.4rem; }
 </style>

@@ -15,6 +15,21 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-17 · v0.4.2 — mejoras tras las pruebas: fijos personales, más iconos y tacto.**
+
+- **Gastos fijos personales en la vista Yo**: tarjeta "Mis gastos fijos" con botón
+  "+ Fijo" (gimnasio, móvil, suscripciones…). Se apuntan solos cada mes como gasto
+  personal privado. Lista reutilizable  (también en Ajustes);
+   admite  para ocultar el selector de tipo.
+- **56 iconos de categoría** (antes 10) en 7 grupos, con nombre bajo cada icono y caja con
+  scroll en el selector. Al elegir un icono con el nombre vacío, se rellena solo. Las 10
+  claves de serie no cambian.
+- **Tacto en móvil**: campos a 16 px (el iPhone ya no amplía la página al tocarlos), sin
+  zoom por doble toque, hover solo con ratón (no se queda "pegado"), respuesta visual al
+  pulsar, botones y chips más grandes. El aviso flotante ya no tapa los botones de debajo.
+  Las hojas solo se cierran si el toque empieza y acaba en el fondo. El menú de las huchas
+  se cierra al tocar fuera. Los pendientes no se pueden enviar dos veces.
+
 **2026-09-16 · v0.4.1 — recuperar contraseña, exportar CSV, medias sin meses vacíos.**
 
 - "¿Has olvidado la contraseña?" en la entrada: Supabase envía un enlace que vuelve a la

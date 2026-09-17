@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import type { Contribution, Member, SavingsGoal } from '../types'
 import { formatDate, formatEur, formatMonth, goalProgress, monthlyPlan, monthsUntil, projectedMonth, round2, todayIso } from '../lib/money'
 import UiIcon from './UiIcon.vue'
@@ -27,6 +27,23 @@ const emit = defineEmits<{
 
 const open = ref(false)
 const menu = ref(false)
+const actionsEl = ref<HTMLElement | null>(null)
+
+// El menú de tres puntos se cierra al tocar fuera o con Escape (igual que en los gastos).
+function onPointerDown(ev: PointerEvent) {
+  if (menu.value && !actionsEl.value?.contains(ev.target as Node)) menu.value = false
+}
+function onKeyDown(ev: KeyboardEvent) {
+  if (ev.key === 'Escape') menu.value = false
+}
+onMounted(() => {
+  document.addEventListener('pointerdown', onPointerDown)
+  document.addEventListener('keydown', onKeyDown)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onPointerDown)
+  document.removeEventListener('keydown', onKeyDown)
+})
 const amount = ref<number>(0)
 const date = ref(todayIso())
 const note = ref('')
@@ -88,7 +105,7 @@ function move() {
           <span v-if="goal.deadline"> · antes del {{ formatDate(goal.deadline) }}</span>
         </div>
       </div>
-      <div v-if="editable" class="actions">
+      <div v-if="editable" ref="actionsEl" class="actions">
         <button type="button" class="icon dots" title="Opciones" aria-label="Opciones" aria-haspopup="menu" :aria-expanded="menu" @click="menu = !menu">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
         </button>
