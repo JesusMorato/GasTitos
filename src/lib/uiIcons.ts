@@ -25,6 +25,8 @@ export const UI_ICONS = {
   eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   wallet: '<path d="M3 7a2 2 0 0 1 2-2h13v4"/><rect x="3" y="7" width="18" height="12" rx="2"/><circle cx="16" cy="13" r="1.5"/>',
   pig: '<path d="M5.2 9 4.6 3.9 9.1 5.9"/><path d="M18.8 9l.6-5.1-4.5 2"/><circle cx="12" cy="13.2" r="8"/><rect x="8.6" y="13.6" width="6.8" height="4.6" rx="2.3"/><path d="M11 15.9h.01"/><path d="M13 15.9h.01"/><path d="M8.6 10.6h.01"/><path d="M15.4 10.6h.01"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/>',
 } as const
 
 export type UiIconName = keyof typeof UI_ICONS

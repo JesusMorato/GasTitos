@@ -327,6 +327,14 @@ export function useData() {
     await loadAll()
   }
 
+  /** Pasa todos los gastos (y fijos) de una categoría a otra; con `del`, borra la de origen. */
+  async function moveCategory(from: string, to: string, del: boolean): Promise<number> {
+    const { data: n, error: e } = await supabase.rpc('move_category', { p_from: from, p_to: to, p_delete: del })
+    fail(e)
+    await loadAll()
+    return Number(n ?? 0)
+  }
+
   async function deleteCategory(id: string) {
     const { error: e } = await supabase.from('categories').delete().eq('id', id)
     if (e && /foreign key|violates/i.test(e.message)) {
@@ -406,7 +414,7 @@ export function useData() {
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
     loadAll, ensureLoaded, refreshIfStale, reset,
     saveExpense, setExpensePublic, deleteExpense,
-    addCategory, updateCategory, deleteCategory,
+    addCategory, updateCategory, deleteCategory, moveCategory,
     addSettlement, deleteSettlement,
     addGoal, updateGoal, deleteGoal,
     addContribution, deleteContribution,

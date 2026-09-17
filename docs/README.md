@@ -15,6 +15,21 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-17 · v0.6 — resumen del año, buscador y mover categorías en bloque.**
+
+- **Resumen del año** (`views/YearView.vue`, icono de calendario a la izquierda del mes):
+  pestañas Yo / Pareja, total y media mensual, mes más alto, barras de los 12 meses
+  (en Pareja, repartido + conjunta apiladas y quién pagó), donut y lista por categoría con
+  % y media al mes, y lo metido en huchas ese año.
+- **Buscar gastos** (`views/SearchView.vue`, lupa a la derecha del mes): texto sin tildes en
+  nota y categoría, tipo, categorías e importe mínimo/máximo, en todos los meses. Resultados
+  agrupados por mes con total; editables (los públicos de la pareja, solo lectura).
+  Filtro puro en `lib/search.ts` con tests.
+- **Mover gastos de categoría en bloque**: migración `0008_mover_categoria.sql` con
+  `move_category(desde, hasta, borrar)` (security definer: mueve también los privados de la
+  pareja). En Ajustes → editar categoría: "Mover todos" o "Mover y borrar categoría". Borrar una
+  categoría con gastos abre esa hoja.
+
 **2026-09-17 · v0.5.2 — confirmaciones propias, guardado seguro y modo sin conexión.**
 
 - Ventana de confirmación propia (`composables/useConfirm.ts`, `components/ConfirmDialog.vue`)
@@ -225,8 +240,7 @@ Bankinter).
 
 ### Ideas sueltas anteriores
 
-- Vista anual, buscar/filtrar gastos, mover gastos de una categoría a otra en bloque,
-  exportar CSV con el menú de compartir del iPhone, ingresos, avisos en el móvil, deshacer.
+- Exportar CSV con el menú de compartir del iPhone, ingresos, avisos en el móvil, deshacer.
 - Avisos cuando un objetivo se cumple o vence.
 - Chat con IA de verdad para el cerdito (Edge Function con la clave; solo resúmenes).
 - Modo oscuro.
