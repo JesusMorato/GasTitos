@@ -15,6 +15,18 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-17 · v0.5.2 — confirmaciones propias, guardado seguro y modo sin conexión.**
+
+- Ventana de confirmación propia (`composables/useConfirm.ts`, `components/ConfirmDialog.vue`)
+  en lugar del `confirm()` del navegador. Uso: `if (await confirm({ message }))`.
+- El formulario de gasto se queda abierto hasta que el servidor confirma (`editor.state.saving`,
+  botón "Guardando…"); si falla, aparece el error y no se pierde lo escrito.
+- Sin conexión: `public/sw.js` guarda la app (página, assets, fuentes) para que abra; los datos
+  se guardan como copia local por usuario en localStorage (`lib/offline.ts`) y se enseñan con
+  una franja amarilla de aviso. Al volver la red se recarga sola. Límites: no se puede guardar
+  sin conexión, y si la sesión caducó (más de una hora cerrada y sin red) pide entrar.
+  La copia local se borra al cerrar sesión.
+
 **2026-09-17 · v0.5.1 — revisión: arreglos tras repasar el código.**
 
 - Supabase devuelve como mucho 1000 filas por consulta: con los años faltarían gastos
@@ -213,6 +225,8 @@ Bankinter).
 
 ### Ideas sueltas anteriores
 
+- Vista anual, buscar/filtrar gastos, mover gastos de una categoría a otra en bloque,
+  exportar CSV con el menú de compartir del iPhone, ingresos, avisos en el móvil, deshacer.
 - Avisos cuando un objetivo se cumple o vence.
 - Chat con IA de verdad para el cerdito (Edge Function con la clave; solo resúmenes).
 - Modo oscuro.

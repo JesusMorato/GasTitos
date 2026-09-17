@@ -7,6 +7,7 @@ import type {
   SavingsGoal, Settlement, SplitMode, Funding,
 } from '../types'
 import { goalBalance, monthOf, todayIso, type Share } from '../lib/money'
+import { isNetworkError, loadSnapshot, online, saveSnapshot } from '../lib/offline'
 
 // Supabase devuelve como mucho 1000 filas por consulta. Con los años una pareja
 // pasa de ahí (y el balance necesita TODOS los repartidos), así que se pide por
@@ -41,6 +42,25 @@ const loaded = ref(false)
 const error = ref<string | null>(null)
 let loadedAt = 0
 let loadedFor = '' // usuario al que pertenecen los datos cargados
+/** true cuando lo que se ve es la copia local porque no hay conexión. */
+const offline = ref(false)
+/** Fecha de la copia que se está enseñando (solo en modo sin conexión). */
+const snapshotAt = ref<number | null>(null)
+
+interface Snapshot {
+  expenses: Expense[]; shares: ExpenseShare[]; categories: Category[]; settlements: Settlement[]
+  goals: SavingsGoal[]; contributions: Contribution[]; budgets: Budget[]; recurring: RecurringExpense[]; runs: RecurringRun[]
+}
+function snapshot(): Snapshot {
+  return {
+    expenses: expenses.value, shares: shares.value, categories: categories.value, settlements: settlements.value,
+    goals: goals.value, contributions: contributions.value, budgets: budgets.value, recurring: recurring.value, runs: runs.value,
+  }
+}
+function applySnapshot(s: Snapshot) {
+  expenses.value = s.expenses; shares.value = s.shares; categories.value = s.categories; settlements.value = s.settlements
+  goals.value = s.goals; contributions.value = s.contributions; budgets.value = s.budgets; recurring.value = s.recurring; runs.value = s.runs
+}
 
 function fail(e: { message: string } | null) {
   if (e) {
@@ -86,6 +106,21 @@ async function loadAll() {
     contributions.value = gc.map((r) => num(r, ['amount'])) as unknown as Contribution[]
     loaded.value = true
     loadedAt = Date.now()
+    offline.value = false
+    snapshotAt.value = null
+    if (loadedFor) saveSnapshot(loadedFor, snapshot())
+  } catch (e) {
+    // Sin red: se enseña la última copia guardada de este usuario, si la hay.
+    const copy = loadedFor ? loadSnapshot<Snapshot>(loadedFor) : null
+    if (isNetworkError(e) && copy) {
+      applySnapshot(copy.value)
+      loaded.value = true
+      offline.value = true
+      snapshotAt.value = copy.at
+      error.value = null
+      return
+    }
+    throw e
   } finally {
     loading.value = false
   }
@@ -97,6 +132,8 @@ function reset() {
   goals.value = []; contributions.value = []; budgets.value = []; recurring.value = []; runs.value = []
   loaded.value = false
   error.value = null
+  offline.value = false
+  snapshotAt.value = null
   loadedAt = 0
   loadedFor = ''
   recurringRanFor = ''
@@ -142,7 +179,7 @@ export function useData() {
    */
   async function syncRecurring() {
     const m = monthOf(todayIso())
-    if (recurringRanFor === m) return
+    if (recurringRanFor === m || !online.value) return
     recurringRanFor = m
     const { error: e } = await supabase.rpc('run_recurring', { p_month: m })
     if (e) {
@@ -186,8 +223,8 @@ export function useData() {
    * en un mes nuevo, se procesan los gastos fijos sin tener que recargar la página.
    */
   async function refreshIfStale(maxAgeMs = 60_000) {
-    if (!loaded.value || loading.value) return
-    if (Date.now() - loadedAt < maxAgeMs) return
+    if (!loaded.value || loading.value || !online.value) return
+    if (!offline.value && Date.now() - loadedAt < maxAgeMs) return
     try {
       await syncRecurring()
       await loadAll()
@@ -364,7 +401,7 @@ export function useData() {
   }
 
   return {
-    expenses, shares, categories, settlements, goals, contributions, budgets, recurring, runs, loading, loaded, error,
+    expenses, shares, categories, settlements, goals, contributions, budgets, recurring, runs, loading, loaded, error, offline, snapshotAt,
     savedByGoal, sharesByExpense, categoryById, expensesWithShares, potBudget, myBudget, setBudget,
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
     loadAll, ensureLoaded, refreshIfStale, reset,

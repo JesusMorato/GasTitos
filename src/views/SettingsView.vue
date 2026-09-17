@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData, type RecurringInput } from '../composables/useData'
+import { useConfirm } from '../composables/useConfirm'
 import type { Category, RecurringExpense } from '../types'
 import { todayIso } from '../lib/money'
 import { downloadText, toCsv } from '../lib/csv'
@@ -16,6 +17,7 @@ import UiIcon from '../components/UiIcon.vue'
 const router = useRouter()
 const { state, me, partner, nameOf, signOut, renameHousehold, renameMe, setMySplit } = useSession()
 const data = useData()
+const { confirm } = useConfirm()
 
 onMounted(() => data.ensureLoaded(state.user?.id))
 
@@ -71,8 +73,8 @@ function saveRec(input: RecurringInput) {
 function toggleRec(r: RecurringExpense) {
   run(() => data.updateRecurring(r.id, { active: !r.active }), r.active ? 'Gasto fijo pausado' : 'Gasto fijo activado')
 }
-function deleteRec(r: RecurringExpense) {
-  if (confirm(`¿Borrar el gasto fijo "${r.name}"? Los gastos ya apuntados se quedan.`)) run(() => data.deleteRecurring(r.id), 'Gasto fijo borrado')
+async function deleteRec(r: RecurringExpense) {
+  if (await confirm({ title: 'Borrar gasto fijo', message: `Se borra "${r.name}". Los gastos que ya se apuntaron se quedan.` })) run(() => data.deleteRecurring(r.id), 'Gasto fijo borrado')
 }
 
 // --- categorías ---
@@ -98,8 +100,8 @@ function saveCat() {
   catOpen.value = false
   run(() => (editing ? data.updateCategory(editing.id, input) : data.addCategory(state.household!.id, input)), 'Categoría guardada')
 }
-function deleteCat(c: Category) {
-  if (confirm(`¿Borrar la categoría "${c.name}"?`)) run(() => data.deleteCategory(c.id), 'Categoría borrada')
+async function deleteCat(c: Category) {
+  if (await confirm({ title: 'Borrar categoría', message: `¿Borrar la categoría "${c.name}"? Solo se puede si no tiene gastos.` })) run(() => data.deleteCategory(c.id), 'Categoría borrada')
 }
 function moveCat(c: Category, dir: -1 | 1) {
   const list = data.categories.value
