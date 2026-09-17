@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { boldParts, computeInsights, insightsSignature, myItems, type InsightInput, type MyItem } from './insights'
 
 const names: Record<string, string> = { comida: 'Comida', ocio: 'Ocio', casa: 'Casa' }
-const item = (spent_on: string, amount: number, category_id: string, fixed = false): MyItem => ({ spent_on, amount, category_id, fixed })
+const item = (spent_on: string, amount: number, category_id: string, fixed = false): MyItem => ({
+  id: `${spent_on}-${amount}`, spent_on, amount, category_id, fixed, description: null, origin: 'personal', full_amount: amount,
+})
 
 function input(items: MyItem[], extra: Partial<InsightInput> = {}): InsightInput {
   return { items, today: '2026-09-15', categoryName: (id) => names[id] ?? id, limit: null, fixedMonthly: 0, goals: [], ...extra }
