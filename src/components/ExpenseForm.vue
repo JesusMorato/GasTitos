@@ -15,6 +15,8 @@ const props = defineProps<{
   categories: readonly Category[]
   currentUserId: string
   initial?: Expense & { shares: Share[] }
+  /** Guardando: botón desactivado con "Guardando…". */
+  busy?: boolean
 }>()
 const emit = defineEmits<{ (e: 'save', v: ExpenseInput): void; (e: 'close'): void }>()
 
@@ -243,8 +245,8 @@ function submit() {
       <p v-if="error" class="error">{{ error }}</p>
 
       <div class="row" style="justify-content: flex-end; margin-top: 0.5rem">
-        <button type="button" class="ghost" @click="emit('close')">Cancelar</button>
-        <button type="submit">Guardar</button>
+        <button type="button" class="ghost" :disabled="busy" @click="emit('close')">Cancelar</button>
+        <button type="submit" :disabled="busy">{{ busy ? 'Guardando…' : 'Guardar' }}</button>
       </div>
     </form>
   </Sheet>

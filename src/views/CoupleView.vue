@@ -4,6 +4,7 @@ import { useSession } from '../composables/useSession'
 import { useData, type GoalInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
 import { useMonth } from '../composables/useMonth'
+import { useConfirm } from '../composables/useConfirm'
 import { computeBalance, formatDate, formatEur, lastMonths, monthOf, paidByMember, shortMonth, sum, totalsBy, totalsByMonth } from '../lib/money'
 import { cssVar } from '../lib/charts'
 import type { Contribution, SavingsGoal, Settlement } from '../types'
@@ -27,6 +28,7 @@ const { state, partner, memberIds, nameOf } = useSession()
 const data = useData()
 const editor = useEditor()
 const { month } = useMonth()
+const { confirm } = useConfirm()
 
 const tab = ref<Tab>('split')
 const tabs: Array<{ value: Tab; label: string }> = [
@@ -105,15 +107,15 @@ async function run(fn: () => Promise<void>) {
 function setPotLimit(v: number | null) {
   run(() => data.setBudget('pot', v))
 }
-function deleteExpense(x: ExpenseRow) {
-  if (confirm(`¿Borrar el gasto de ${formatEur(x.amount)}?`)) run(() => data.deleteExpense(x.id))
+async function deleteExpense(x: ExpenseRow) {
+  if (await confirm({ title: 'Borrar gasto', message: `¿Borrar el gasto de ${formatEur(x.amount)}?` })) run(() => data.deleteExpense(x.id))
 }
 function saveSettlement(v: Pick<Settlement, 'from_user' | 'to_user' | 'amount' | 'settled_on' | 'note'>) {
   showSettle.value = false
   run(() => data.addSettlement(state.household!.id, v))
 }
-function deleteSettlement(s: Settlement) {
-  if (confirm('¿Borrar este pago? El balance volverá a incluirlo.')) run(() => data.deleteSettlement(s.id))
+async function deleteSettlement(s: Settlement) {
+  if (await confirm({ title: 'Borrar pago', message: 'El balance volverá a contar lo que este pago saldaba.' })) run(() => data.deleteSettlement(s.id))
 }
 
 function saveGoal(input: GoalInput) {
@@ -126,14 +128,14 @@ function editGoal(g: SavingsGoal) {
   editingGoal.value = g
   showGoalForm.value = true
 }
-function deleteGoal(g: SavingsGoal) {
-  if (confirm(`¿Borrar la hucha "${g.name}" y todos sus movimientos?`)) run(() => data.deleteGoal(g.id))
+async function deleteGoal(g: SavingsGoal) {
+  if (await confirm({ title: 'Borrar hucha', message: `Se borra la hucha "${g.name}" con todos sus movimientos.` })) run(() => data.deleteGoal(g.id))
 }
 function moveGoal(g: SavingsGoal, amount: number, date: string, note: string | null, direction: 'in' | 'out') {
   run(() => data.addContribution(g.id, userId.value, amount, date, note, direction))
 }
-function deleteContribution(c: Contribution) {
-  if (confirm('¿Borrar este movimiento?')) run(() => data.deleteContribution(c.id))
+async function deleteContribution(c: Contribution) {
+  if (await confirm({ title: 'Borrar movimiento', message: `¿Borrar el movimiento de ${formatEur(c.amount)}?` })) run(() => data.deleteContribution(c.id))
 }
 </script>
 

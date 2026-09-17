@@ -4,6 +4,7 @@ import { useSession } from '../composables/useSession'
 import { useData, type GoalInput, type RecurringInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
 import { useMonth } from '../composables/useMonth'
+import { useConfirm } from '../composables/useConfirm'
 import { formatEur, lastMonths, monthOf, myShareTotal, round2, shortMonth, sum, totalsBy, totalsByMonth } from '../lib/money'
 import { myItems } from '../lib/insights'
 import type { Contribution, RecurringExpense, SavingsGoal } from '../types'
@@ -24,6 +25,7 @@ const { state, me, nameOf } = useSession()
 const data = useData()
 const editor = useEditor()
 const { month } = useMonth()
+const { confirm } = useConfirm()
 
 const showGoalForm = ref(false)
 const editingGoal = ref<SavingsGoal | undefined>()
@@ -80,8 +82,8 @@ function saveRec(input: RecurringInput) {
 function toggleRec(r: RecurringExpense) {
   run(() => data.updateRecurring(r.id, { active: !r.active }))
 }
-function deleteRec(r: RecurringExpense) {
-  if (confirm(`¿Borrar el gasto fijo "${r.name}"? Los gastos ya apuntados se quedan.`)) run(() => data.deleteRecurring(r.id))
+async function deleteRec(r: RecurringExpense) {
+  if (await confirm({ title: 'Borrar gasto fijo', message: `Se borra "${r.name}". Los gastos que ya se apuntaron se quedan.` })) run(() => data.deleteRecurring(r.id))
 }
 
 const myGoals = computed(() => data.goals.value.filter((g) => !g.is_shared && g.user_id === userId.value))
@@ -103,8 +105,8 @@ async function run(fn: () => Promise<void>) {
 function setLimit(v: number | null) {
   run(() => data.setBudget('personal', v))
 }
-function deleteExpense(x: ExpenseRow) {
-  if (confirm(`¿Borrar el gasto de ${formatEur(x.amount)}?`)) run(() => data.deleteExpense(x.id))
+async function deleteExpense(x: ExpenseRow) {
+  if (await confirm({ title: 'Borrar gasto', message: `¿Borrar el gasto de ${formatEur(x.amount)}?` })) run(() => data.deleteExpense(x.id))
 }
 function togglePublic(x: ExpenseRow) {
   run(() => data.setExpensePublic(x.id, !x.is_public))
@@ -120,8 +122,8 @@ function editGoal(g: SavingsGoal) {
   editingGoal.value = g
   showGoalForm.value = true
 }
-function deleteGoal(g: SavingsGoal) {
-  if (confirm(`¿Borrar la hucha "${g.name}" y todos sus movimientos?`)) run(() => data.deleteGoal(g.id))
+async function deleteGoal(g: SavingsGoal) {
+  if (await confirm({ title: 'Borrar hucha', message: `Se borra la hucha "${g.name}" con todos sus movimientos.` })) run(() => data.deleteGoal(g.id))
 }
 function toggleGoalPublic(g: SavingsGoal) {
   run(() => data.updateGoal(g.id, { is_public: !g.is_public }))
@@ -129,8 +131,8 @@ function toggleGoalPublic(g: SavingsGoal) {
 function moveGoal(g: SavingsGoal, amount: number, date: string, note: string | null, direction: 'in' | 'out') {
   run(() => data.addContribution(g.id, userId.value, amount, date, note, direction))
 }
-function deleteContribution(c: Contribution) {
-  if (confirm('¿Borrar este movimiento?')) run(() => data.deleteContribution(c.id))
+async function deleteContribution(c: Contribution) {
+  if (await confirm({ title: 'Borrar movimiento', message: `¿Borrar el movimiento de ${formatEur(c.amount)}?` })) run(() => data.deleteContribution(c.id))
 }
 </script>
 

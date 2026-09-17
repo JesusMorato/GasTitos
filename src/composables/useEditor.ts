@@ -12,12 +12,15 @@ const state = reactive<{
   formOpen: boolean
   preset: Kind
   editing: ExpenseRow | undefined
+  /** Guardando en el servidor: el formulario sigue abierto con el botón desactivado. */
+  saving: boolean
   toast: string | null
 }>({
   quickOpen: false,
   formOpen: false,
   preset: 'personal',
   editing: undefined,
+  saving: false,
   toast: null,
 })
 
@@ -39,6 +42,7 @@ export function useEditor() {
     state.formOpen = true
   }
   function close() {
+    if (state.saving) return
     state.quickOpen = false
     state.formOpen = false
     state.editing = undefined

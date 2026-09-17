@@ -4,6 +4,7 @@ import { computed, reactive, readonly } from 'vue'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase, authRedirectUrl } from '../supabase'
 import type { Household, Member } from '../types'
+import { clearSnapshots, isNetworkError, loadSnapshot, saveSnapshot } from '../lib/offline'
 
 interface State {
   ready: boolean
@@ -29,11 +30,15 @@ let initialised = false
 /** Carga hogar y miembros del usuario dado, sin tocar el estado hasta tener todo. */
 async function fetchHousehold(user: User | null): Promise<{ household: Household | null; members: Member[] }> {
   if (!user) return { household: null, members: [] }
+  const key = `hogar:${user.id}`
   const { data: rows, error } = await supabase
     .from('household_members')
     .select('*')
     .order('joined_at', { ascending: true })
   if (error) {
+    // Sin red: el hogar guardado de la última vez, para no mandar a "Casi listo".
+    const copy = loadSnapshot<{ household: Household | null; members: Member[] }>(key)
+    if (isNetworkError(error) && copy) return copy.value
     state.error = error.message
     return { household: null, members: [] }
   }
@@ -41,7 +46,9 @@ async function fetchHousehold(user: User | null): Promise<{ household: Household
   const mine = members.find((m) => m.user_id === user.id)
   if (!mine) return { household: null, members }
   const { data: h } = await supabase.from('households').select('*').eq('id', mine.household_id).single()
-  return { household: (h as Household) ?? null, members }
+  const out = { household: (h as Household) ?? null, members }
+  if (out.household) saveSnapshot(key, out)
+  return out
 }
 
 async function loadHousehold() {
@@ -94,6 +101,7 @@ export function useSession() {
   }
 
   async function signOut() {
+    clearSnapshots()
     await supabase.auth.signOut()
     state.user = null
     state.household = null

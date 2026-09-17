@@ -6,10 +6,12 @@ import { useData, type ExpenseInput } from './composables/useData'
 import { useEditor } from './composables/useEditor'
 import { useMonth } from './composables/useMonth'
 import { useInsights } from './composables/useInsights'
+import { online } from './lib/offline'
 import { formatMonth, monthOf, todayIso } from './lib/money'
 import QuickAdd from './components/QuickAdd.vue'
 import ExpenseForm from './components/ExpenseForm.vue'
 import PiggyAdvisor from './components/PiggyAdvisor.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
 import UiIcon from './components/UiIcon.vue'
 import Logo from './components/Logo.vue'
 import { installSwipe } from './lib/swipe'
@@ -58,20 +60,33 @@ function onVisible() {
 onMounted(() => document.addEventListener('visibilitychange', onVisible))
 onBeforeUnmount(() => document.removeEventListener('visibilitychange', onVisible))
 
+// Cuando vuelve la conexión se recarga enseguida (y se pasa de la copia local a lo real).
+watch(online, (on) => { if (on && inApp.value) data.refreshIfStale(0) })
+const offlineText = computed(() => {
+  if (!online.value) return data.offline.value ? 'Sin conexión: ves la última copia guardada. No se puede guardar hasta que vuelva.' : 'Sin conexión: no se puede guardar hasta que vuelva.'
+  if (data.offline.value) return 'Enseñando la última copia guardada; reconectando…'
+  return ''
+})
+
 // Al llegar desde el email de recuperación, la app manda a "nueva contraseña".
 watch(() => state.recovery, (r) => { if (r) router.push({ name: 'new-password' }) })
 const showMonth = computed(() => inApp.value && (route.name === 'personal' || route.name === 'couple'))
 const navAccent = computed(() => (route.name === 'couple' ? 'var(--pareja)' : 'var(--yo)'))
 
+// El formulario se queda abierto hasta que el servidor confirma: si falla la
+// red, no se pierde lo escrito y se puede volver a pulsar Guardar.
 async function saveExpense(input: ExpenseInput) {
   const hid = state.household?.id
-  if (!hid) return
-  editor.close()
+  if (!hid || editor.state.saving) return
+  editor.state.saving = true
   try {
     await data.saveExpense(input)
+    editor.state.saving = false
+    editor.close()
     editor.toast(input.id ? 'Gasto actualizado' : 'Gasto guardado')
   } catch (e) {
-    editor.toast((e as Error).message)
+    editor.state.saving = false
+    editor.toast(`No se ha podido guardar: ${(e as Error).message}`)
   }
 }
 </script>
@@ -96,6 +111,8 @@ async function saveExpense(input: ExpenseInput) {
       <button type="button" class="icon" aria-label="Mes siguiente" @click="shift(1)">›</button>
     </div>
   </header>
+
+  <div v-if="inApp && offlineText" class="offline-bar" role="status">{{ offlineText }}</div>
 
   <main class="container grow">
     <p v-if="!state.ready" class="muted">Cargando…</p>
@@ -124,10 +141,12 @@ async function saveExpense(input: ExpenseInput) {
     :categories="data.categories.value"
     :current-user-id="state.user.id"
     :initial="editor.state.editing"
+    :busy="editor.state.saving"
     @save="saveExpense"
     @close="editor.close()"
   />
 
+  <ConfirmDialog />
   <PiggyAdvisor v-if="piggyOpen" :insights="piggy.insights.value" :name="me?.display_name" @close="piggyOpen = false" />
 
   <div v-if="editor.state.toast" class="toast" role="status">{{ editor.state.toast }}</div>
@@ -142,6 +161,7 @@ async function saveExpense(input: ExpenseInput) {
   pointer-events: none;
 }
 .topbar .btn.icon { text-decoration: none; }
+.offline-bar { background: var(--warn-soft); color: var(--warn); font-size: 0.82rem; font-weight: 600; text-align: center; padding: 0.35rem 16px; }
 .topbar-actions { display: flex; align-items: center; gap: 0.1rem; }
 .piggy-btn { position: relative; }
 .piggy-dot {

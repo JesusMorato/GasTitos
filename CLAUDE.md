@@ -59,6 +59,8 @@ GitHub Actions.
 - Diseño: tokens en `src/style.css`. Cada vista envuelve su contenido en `.space-yo`
   (verde) o `.space-pareja` (ciruela), que fijan `--accent`. Modales con
   `components/Sheet.vue`. Emojis y colores los elige el usuario con `EmojiPicker.vue`.
+- Confirmaciones con `useConfirm()` (`if (await confirm({ message }))`), nunca `confirm()` del navegador.
+- Sin conexión: `public/sw.js` (caché de la app) y `lib/offline.ts` (copia local de datos por usuario).
 - El editor de gastos es global (`useEditor.ts`): el botón ➕ de `App.vue` y las vistas
   comparten el mismo formulario.
 
