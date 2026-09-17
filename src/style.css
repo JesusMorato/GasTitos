@@ -141,7 +141,7 @@ p { margin: 0 0 0.75rem; }
   box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--accent) 70%, transparent);
   cursor: pointer; display: grid; place-items: center;
 }
-.fab:active { transform: scale(0.96); }
+.fab:active { transform: scale(0.92); }
 
 /* ---------- cards & surfaces ---------- */
 .card {
@@ -166,7 +166,7 @@ p { margin: 0 0 0.75rem; }
 /* ---------- segmented tabs ---------- */
 .segmented { display: flex; background: var(--surface-2); border-radius: 999px; padding: 3px; gap: 2px; }
 .segmented button {
-  flex: 1; border: 0; background: transparent; color: var(--ink-2); font: inherit; font-weight: 600; font-size: 0.88rem;
+  flex: 1; min-height: 36px; border: 0; background: transparent; color: var(--ink-2); font: inherit; font-weight: 600; font-size: 0.88rem;
   padding: 0.45rem 0.6rem; border-radius: 999px; cursor: pointer; white-space: nowrap;
 }
 .segmented button.active { background: var(--surface); color: var(--accent-ink); box-shadow: var(--shadow); }
@@ -180,14 +180,24 @@ button, .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
 }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Tacto en móvil: sin retraso ni zoom por doble toque, sin el recuadro gris de iOS, y
+   respuesta visible al pulsar (así se nota que el toque ha entrado aunque la red tarde). */
+button, .btn, a, input, select, textarea, label, .chip { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button, .btn { transition: transform 0.08s ease, background-color 0.12s ease, opacity 0.12s ease; -webkit-user-select: none; user-select: none; }
+button:not(:disabled):active, .btn:active { transform: scale(0.96); opacity: 0.85; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button.secondary { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
 button.ghost { background: transparent; color: var(--ink-2); border-color: transparent; padding: 0.35rem 0.5rem; }
 button.outline { background: transparent; color: var(--accent-ink); }
 button.danger { background: transparent; color: var(--neg); border-color: var(--neg); }
 button.small { padding: 0.35rem 0.7rem; font-size: 0.85rem; }
-button.icon { width: 36px; height: 36px; padding: 0; border-radius: 50%; background: transparent; border-color: transparent; color: var(--ink-2); font-size: 1rem; }
-button.icon:hover { background: var(--surface-2); }
+button.icon { width: 40px; height: 40px; padding: 0; border-radius: 50%; background: transparent; border-color: transparent; color: var(--ink-2); font-size: 1rem; }
+button.icon:not(:disabled):active { background: var(--surface-2); }
+/* El hover solo en ratón: en el móvil se quedaba "pegado" tras tocar. */
+@media (hover: hover) {
+  button.icon:hover { background: var(--surface-2); }
+  .menu button:hover { background: var(--surface-2); }
+}
 button.icon.dots { color: var(--ink-3); }
 button.icon.dots svg { width: 22px; height: 22px; }
 button.block { width: 100%; }
@@ -195,6 +205,8 @@ button.block { width: 100%; }
 /* ---------- forms ---------- */
 input, select, textarea {
   font: inherit; width: 100%;
+  /* 16 px como mínimo: con menos, el iPhone hace zoom al tocar el campo y la página se queda ampliada. */
+  font-size: max(16px, 1em);
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--line); border-radius: var(--r-md);
   background: var(--surface); color: var(--ink);
@@ -211,7 +223,7 @@ label { display: block; font-size: 0.8rem; color: var(--ink-2); margin-bottom: 0
 .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .chip {
   border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 500;
-  padding: 0.35rem 0.7rem; border-radius: 999px; font-size: 0.88rem; cursor: pointer; display: inline-flex; gap: 0.35rem; align-items: center;
+  padding: 0.45rem 0.8rem; min-height: 38px; border-radius: 999px; font-size: 0.9rem; cursor: pointer; display: inline-flex; gap: 0.35rem; align-items: center;
 }
 .chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .error { color: var(--neg); font-size: 0.9rem; margin: 0.5rem 0; }
@@ -252,7 +264,7 @@ label { display: block; font-size: 0.8rem; color: var(--ink-2); margin-bottom: 0
   background: transparent; color: var(--ink); border-color: transparent;
   padding: 0.6rem 0.75rem; border-radius: 8px;
 }
-.menu button:hover { background: var(--surface-2); }
+.menu button:active { background: var(--surface-2); transform: none; }
 .menu button.destructive { color: var(--neg); }
 
 /* ---------- progress ---------- */
@@ -293,14 +305,22 @@ body.sheet-open { position: fixed; left: 0; right: 0; overflow: hidden; }
 .quick button small { display: block; color: var(--ink-2); font-weight: 500; font-size: 0.8rem; }
 
 /* ---------- emoji picker ---------- */
-.icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 0.6rem; }
-.icon-grid button { border: 2px solid transparent; background: transparent; padding: 2px; border-radius: 14px; display: grid; place-items: center; }
+/* Iconos por grupos, en una caja con scroll propio para no alargar la hoja */
+.icon-scroll { max-height: 300px; overflow-y: auto; overscroll-behavior: contain; border-radius: var(--r-md); background: var(--surface-2); padding: 0.3rem 0.5rem 0.5rem; }
+.icon-group { margin: 0.5rem 0 0.3rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 4px; }
+.icon-grid button {
+  border: 2px solid transparent; background: transparent; color: var(--ink-2); padding: 4px 2px; border-radius: 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0;
+}
+.icon-grid .emoji-badge { background: color-mix(in srgb, var(--badge) 16%, var(--surface)); }
+.icon-name { font-size: 0.66rem; font-weight: 600; line-height: 1.15; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .icon-grid button.active { border-color: var(--accent); background: var(--accent-soft); }
-.emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 4px; }
+.emoji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; }
 .emoji-grid button { border: 1px solid transparent; background: var(--surface-2); border-radius: 10px; font-size: 1.25rem; padding: 0.35rem 0; }
 .emoji-grid button.active { border-color: var(--accent); background: var(--accent-soft); }
-.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
-.swatches button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent; padding: 0; background: var(--sw); }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatches button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; padding: 0; background: var(--sw); }
 .swatches button.active { border-color: var(--ink); box-shadow: 0 0 0 2px var(--surface); }
 
 /* ---------- misc ---------- */

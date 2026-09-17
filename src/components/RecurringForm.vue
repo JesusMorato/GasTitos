@@ -12,6 +12,8 @@ const props = defineProps<{
   categories: readonly Category[]
   currentUserId: string
   initial?: RecurringExpense
+  /** Tipo fijado desde fuera (p. ej. "personal" desde la vista Yo): no se muestra el selector. */
+  fixedKind?: RecurringKind
 }>()
 const emit = defineEmits<{ (e: 'save', v: RecurringInput): void; (e: 'close'): void }>()
 
@@ -19,7 +21,7 @@ const partner = computed(() => props.members.find((m) => m.user_id !== props.cur
 const me = computed(() => props.members.find((m) => m.user_id === props.currentUserId) ?? null)
 
 const name = ref(props.initial?.name ?? '')
-const kind = ref<RecurringKind>(props.initial?.kind ?? 'pot')
+const kind = ref<RecurringKind>(props.fixedKind ?? props.initial?.kind ?? 'pot')
 const categoryId = ref(props.initial?.category_id ?? props.categories[0]?.id ?? '')
 const variable = ref(props.initial ? props.initial.amount == null : false)
 const amount = ref<number>(props.initial?.amount ?? 0)
@@ -82,19 +84,19 @@ function submit() {
 </script>
 
 <template>
-  <Sheet :title="initial ? 'Editar gasto fijo' : 'Nuevo gasto fijo'" @close="emit('close')">
+  <Sheet :title="initial ? 'Editar gasto fijo' : fixedKind === 'personal' ? 'Nuevo gasto fijo personal' : 'Nuevo gasto fijo'" @close="emit('close')">
     <form @submit.prevent="submit">
       <div class="field">
         <label for="rname">Nombre</label>
-        <input id="rname" v-model="name" required maxlength="60" placeholder="Alquiler, Luz, Wifi…" />
+        <input id="rname" v-model="name" required maxlength="60" :placeholder="kind === 'personal' ? 'Gimnasio, Spotify, Móvil…' : 'Alquiler, Luz, Wifi…'" />
       </div>
 
       <div class="field">
-        <SegmentedControl v-model="kind" :options="kindOptions" />
+        <SegmentedControl v-if="!fixedKind" v-model="kind" :options="kindOptions" />
         <p class="help">
           <template v-if="kind === 'pot'">Sale de la cuenta conjunta.</template>
           <template v-else-if="kind === 'shared'">Lo paga uno con su dinero y se reparte.</template>
-          <template v-else>Solo tuyo.</template>
+          <template v-else>Solo tuyo y privado: tu pareja no lo ve.</template>
         </p>
       </div>
 

@@ -4,12 +4,13 @@ import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData, type RecurringInput } from '../composables/useData'
 import type { Category, RecurringExpense } from '../types'
-import { formatEur, todayIso } from '../lib/money'
+import { todayIso } from '../lib/money'
 import { downloadText, toCsv } from '../lib/csv'
 import CategoryIcon from '../components/CategoryIcon.vue'
 import Sheet from '../components/Sheet.vue'
 import EmojiPicker from '../components/EmojiPicker.vue'
 import RecurringForm from '../components/RecurringForm.vue'
+import RecurringList from '../components/RecurringList.vue'
 import UiIcon from '../components/UiIcon.vue'
 
 const router = useRouter()
@@ -58,10 +59,6 @@ async function run(fn: () => Promise<void>, okMsg: string) {
 // --- gastos fijos ---
 const recOpen = ref(false)
 const recEditing = ref<RecurringExpense | undefined>()
-const kindLabel: Record<RecurringExpense['kind'], string> = { personal: 'personal', shared: 'repartido', pot: 'conjunta' }
-function everyLabel(n: number) {
-  return n === 1 ? 'cada mes' : n === 12 ? 'cada año' : `cada ${n} meses`
-}
 function openRec(r?: RecurringExpense) {
   recEditing.value = r
   recOpen.value = true
@@ -170,24 +167,16 @@ function exportGoals() {
         <button type="button" class="small secondary" @click="openRec()">+ Nuevo</button>
       </div>
       <p class="tiny" style="margin-bottom: 0.4rem">Al entrar en un mes nuevo se apuntan solos. Los de importe variable quedan pendientes hasta que pongas la cifra.</p>
-      <div v-if="data.recurring.value.length === 0" class="empty">Aún no hay gastos fijos. Empieza por el alquiler.</div>
-      <ul v-else class="list">
-        <li v-for="r in data.recurring.value" :key="r.id" :style="{ opacity: r.active ? 1 : 0.55 }">
-          <CategoryIcon :icon="data.categoryById.value[r.category_id]?.icon" :emoji="data.categoryById.value[r.category_id]?.emoji" :color="data.categoryById.value[r.category_id]?.color" />
-          <div class="grow">
-            <div class="ellipsis"><strong>{{ r.name }}</strong> <span class="tag muted">{{ kindLabel[r.kind] }}</span></div>
-            <div class="tiny">
-              {{ everyLabel(r.every_n_months) }}<span v-if="r.kind === 'shared'"> · paga {{ nameOf(r.user_id) }}</span><span v-if="!r.active"> · pausado</span>
-            </div>
-          </div>
-          <span class="amount">{{ r.amount == null ? 'variable' : formatEur(r.amount) }}</span>
-          <div class="actions">
-            <button type="button" class="icon" :title="r.active ? 'Pausar' : 'Activar'" :aria-label="r.active ? 'Pausar' : 'Activar'" @click="toggleRec(r)"><UiIcon :name="r.active ? 'pause' : 'play'" :size="18" /></button>
-            <button type="button" class="icon" title="Editar" aria-label="Editar" @click="openRec(r)"><UiIcon name="pencil" :size="18" /></button>
-            <button type="button" class="icon" title="Borrar" aria-label="Borrar" @click="deleteRec(r)"><UiIcon name="trash" :size="18" /></button>
-          </div>
-        </li>
-      </ul>
+      <RecurringList
+        :items="data.recurring.value"
+        :category-by-id="data.categoryById.value"
+        :name-of="nameOf"
+        show-kind
+        empty-text="Aún no hay gastos fijos. Empieza por el alquiler."
+        @toggle="toggleRec"
+        @edit="openRec"
+        @delete="deleteRec"
+      />
     </div>
 
     <div class="card">
@@ -304,7 +293,7 @@ function exportGoals() {
           <label for="cname">Nombre</label>
           <input id="cname" v-model="catName" required maxlength="30" placeholder="Mascotas" />
         </div>
-        <EmojiPicker v-model:emoji="catEmoji" v-model:color="catColor" v-model:icon="catIcon" icons />
+        <EmojiPicker v-model:emoji="catEmoji" v-model:color="catColor" v-model:icon="catIcon" icons @pick-icon="(i) => { if (!catName.trim()) catName = i.name }" />
         <div class="row" style="justify-content: flex-end">
           <button type="button" class="ghost" @click="catOpen = false">Cancelar</button>
           <button type="submit">Guardar</button>

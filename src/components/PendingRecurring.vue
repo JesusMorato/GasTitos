@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 import type { Category, RecurringExpense, RecurringRun } from '../types'
 import { formatEur, formatMonth, round2 } from '../lib/money'
 import CategoryIcon from './CategoryIcon.vue'
@@ -13,6 +13,15 @@ const props = defineProps<{
 const emit = defineEmits<{ (e: 'resolve', runId: string, amount: number): void; (e: 'skip', runId: string): void }>()
 
 const drafts = reactive<Record<string, number>>({})
+// Pendientes ya enviados: se desactivan sus botones hasta que desaparecen de la
+// lista, para que un doble toque no dé error de "ya no está pendiente".
+const sent = reactive<Record<string, boolean>>({})
+watch(
+  () => props.items.map((it) => it.run.id),
+  (ids) => {
+    for (const id of Object.keys(sent)) if (!ids.includes(id)) delete sent[id]
+  },
+)
 
 function draft(id: string, recurringId: string): number {
   if (!(id in drafts)) drafts[id] = props.lastAmountOf(recurringId) ?? 0
@@ -21,7 +30,15 @@ function draft(id: string, recurringId: string): number {
 
 function submit(runId: string) {
   const v = round2(Number(drafts[runId]))
-  if (v > 0) emit('resolve', runId, v)
+  if (!(v > 0) || sent[runId]) return
+  sent[runId] = true
+  emit('resolve', runId, v)
+}
+
+function skip(runId: string) {
+  if (sent[runId]) return
+  sent[runId] = true
+  emit('skip', runId)
 }
 </script>
 
@@ -54,8 +71,8 @@ function submit(runId: string) {
               @input="drafts[it.run.id] = Number(($event.target as HTMLInputElement).value)"
             />
           </div>
-          <button type="submit" class="small">Apuntar</button>
-          <button type="button" class="ghost small" title="Este mes no" @click="emit('skip', it.run.id)">Saltar</button>
+          <button type="submit" class="small" :disabled="sent[it.run.id]">{{ sent[it.run.id] ? 'Apuntando…' : 'Apuntar' }}</button>
+          <button type="button" class="ghost small" title="Este mes no" :disabled="sent[it.run.id]" @click="skip(it.run.id)">Saltar</button>
         </form>
       </li>
     </ul>
