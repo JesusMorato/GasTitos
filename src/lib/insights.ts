@@ -9,18 +9,26 @@ import {
 
 /** Un gasto tal y como cuenta para mí. */
 export interface MyItem {
+  id: string
   spent_on: string
   amount: number
   category_id: string
   /** Viene de un gasto fijo. */
   fixed: boolean
+  description: string | null
+  /** De dónde sale `amount`: gasto personal entero, mi parte de un repartido o mi % de la conjunta. */
+  origin: 'personal' | 'shared' | 'pot'
+  /** Importe completo del gasto original (igual a `amount` en los personales). */
+  full_amount: number
 }
 
 export interface RowForMe {
+  id?: string
   user_id: string
   amount: number
   spent_on: string
   category_id: string
+  description?: string | null
   is_shared: boolean
   funding: 'personal' | 'pot'
   recurring_id: string | null
@@ -31,14 +39,17 @@ export interface RowForMe {
 export function myItems(rows: RowForMe[], userId: string, myPct: number): MyItem[] {
   const out: MyItem[] = []
   for (const e of rows) {
-    const base = { spent_on: e.spent_on, category_id: e.category_id, fixed: !!e.recurring_id }
+    const base = {
+      id: e.id ?? '', spent_on: e.spent_on, category_id: e.category_id, fixed: !!e.recurring_id,
+      description: e.description ?? null, full_amount: e.amount,
+    }
     if (!e.is_shared) {
-      if (e.user_id === userId) out.push({ ...base, amount: e.amount })
+      if (e.user_id === userId) out.push({ ...base, origin: 'personal', amount: e.amount })
     } else if (e.funding === 'pot') {
-      out.push({ ...base, amount: round2(e.amount * myPct) })
+      out.push({ ...base, origin: 'pot', amount: round2(e.amount * myPct) })
     } else {
       const mine = e.shares.find((s) => s.user_id === userId)?.amount ?? 0
-      if (mine > 0) out.push({ ...base, amount: mine })
+      if (mine > 0) out.push({ ...base, origin: 'shared', amount: mine })
     }
   }
   return out

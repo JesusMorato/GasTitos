@@ -15,6 +15,15 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-17 · desglose desplegable en el donut.**
+En el donut de "Mi mes" (Yo) y de la cuenta conjunta (Pareja), al pulsar una categoría
+de la leyenda o su trozo del donut se despliega con animación la lista de gastos que
+la componen (fecha, concepto, importe; en los repartidos "tu parte de X", en la
+conjunta "tu % de X") y termina con la suma. El trozo elegido se separa del donut.
+Componente `CategoryBreakdown.vue` (la leyenda), agrupación en `lib/breakdown.ts`
+(puro, con tests); `myItems` (`lib/insights.ts`) lleva ahora id, concepto y origen
+de cada importe.
+
 **2026-09-17 · v0.6 — resumen del año, buscador y mover categorías en bloque.**
 
 - **Resumen del año** (`views/YearView.vue`, enlace "Ver el resumen del año" bajo las barras de 6 meses en Yo y Pareja, con botón Volver):

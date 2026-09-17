@@ -6,15 +6,16 @@ import { useData, type GoalInput, type RecurringInput } from '../composables/use
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
 import { useMonth } from '../composables/useMonth'
 import { useConfirm } from '../composables/useConfirm'
-import { formatEur, lastMonths, monthOf, myShareTotal, round2, shortMonth, sum, totalsBy, totalsByMonth } from '../lib/money'
+import { formatEur, lastMonths, monthOf, myShareTotal, round2, shortMonth, sum, totalsByMonth } from '../lib/money'
 import { myItems } from '../lib/insights'
+import { breakdownBy } from '../lib/breakdown'
 import type { Contribution, RecurringExpense, SavingsGoal } from '../types'
 import ExpenseList from '../components/ExpenseList.vue'
-import CategoryIcon from '../components/CategoryIcon.vue'
 import EmptyState from '../components/EmptyState.vue'
 import GoalForm from '../components/GoalForm.vue'
 import GoalCard from '../components/GoalCard.vue'
 import DonutChart from '../components/DonutChart.vue'
+import CategoryBreakdown from '../components/CategoryBreakdown.vue'
 import MonthlyBars from '../components/MonthlyBars.vue'
 import BudgetCard from '../components/BudgetCard.vue'
 import PendingRecurring from '../components/PendingRecurring.vue'
@@ -52,7 +53,22 @@ const myPot = computed(() => round2(sum(monthRows.value.filter((e) => e.is_share
 const totalMonth = computed(() => round2(totalPersonal.value + myShare.value + myPot.value))
 const fixedCount = computed(() => myExpenses.value.filter((e) => e.recurring_id).length)
 
-const byCategory = computed(() => totalsBy(myItemsMonth.value, (x) => x.category_id, (x) => x.amount))
+// Por categoría, con los gastos que componen cada una (se despliegan al pulsar).
+const byCategory = computed(() =>
+  breakdownBy(
+    myItemsMonth.value.map((x) => ({
+      key: x.category_id,
+      id: x.id,
+      label: x.description || data.categoryById.value[x.category_id]?.name || 'Gasto',
+      date: x.spent_on,
+      amount: x.amount,
+      note:
+        x.origin === 'shared' ? `tu parte de ${formatEur(x.full_amount)}`
+        : x.origin === 'pot' ? `tu ${Math.round(myPct.value * 100)} % de ${formatEur(x.full_amount)}`
+        : undefined,
+    })),
+  ),
+)
 const donutItems = computed(() =>
   byCategory.value.map((c) => ({
     label: data.categoryById.value[c.key]?.name ?? 'Otros',
@@ -60,6 +76,15 @@ const donutItems = computed(() =>
     color: data.categoryById.value[c.key]?.color ?? '#7a857f',
   })),
 )
+// Categoría desplegada: la comparten la leyenda y el trozo resaltado del donut.
+const openCat = ref<string | null>(null)
+const selectedIdx = computed(() => {
+  const i = byCategory.value.findIndex((c) => c.key === openCat.value)
+  return i < 0 ? null : i
+})
+function selectSlice(i: number | null) {
+  openCat.value = i === null ? null : (byCategory.value[i]?.key ?? null)
+}
 
 const months6 = computed(() => lastMonths(month.value, 6))
 const bars6 = computed(() => [{ label: 'Gastado', values: totalsByMonth(myItemsAll.value, months6.value) }])
@@ -154,14 +179,8 @@ async function deleteContribution(c: Contribution) {
 
     <div class="card">
       <template v-if="byCategory.length">
-        <DonutChart :items="donutItems" :total="totalMonth" caption="este mes" />
-        <ul class="donut-legend" :class="{ scrolling: byCategory.length > 5 }">
-          <li v-for="c in byCategory" :key="c.key" :style="{ '--dot': data.categoryById.value[c.key]?.color }">
-            <span class="dot" />
-            <span class="name"><CategoryIcon variant="inline" :icon="data.categoryById.value[c.key]?.icon" :emoji="data.categoryById.value[c.key]?.emoji" :color="data.categoryById.value[c.key]?.color" />{{ data.categoryById.value[c.key]?.name }}</span>
-            <span class="val">{{ formatEur(c.total) }}</span>
-          </li>
-        </ul>
+        <DonutChart :items="donutItems" :total="totalMonth" caption="este mes" :selected="selectedIdx" @select="selectSlice" />
+        <CategoryBreakdown v-model:open="openCat" :rows="byCategory" :category-by-id="data.categoryById.value" />
       </template>
       <EmptyState v-else kind="gastos">Sin gastos este mes. Pulsa + para apuntar el primero.</EmptyState>
     </div>

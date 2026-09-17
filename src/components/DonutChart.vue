@@ -9,7 +9,11 @@ const props = defineProps<{
   items: Array<{ label: string; value: number; color: string }>
   total: number
   caption?: string
+  /** Índice del trozo resaltado (se separa un poco del resto). */
+  selected?: number | null
 }>()
+// Al pulsar un trozo se avisa con su índice; si ya era el elegido, con null.
+const emit = defineEmits<{ (e: 'select', index: number | null): void }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 
@@ -49,6 +53,7 @@ useChart(
           borderColor: t.surface,
           borderWidth: 2,
           hoverOffset: 4,
+          offset: items.map((_, i) => (i === props.selected ? 12 : 0)),
         }],
       },
       options: {
@@ -56,6 +61,11 @@ useChart(
         responsive: true,
         maintainAspectRatio: false,
         animation: { duration: 350 },
+        onClick: (_evt, elements) => {
+          if (!props.items.length) return
+          const i = elements[0]?.index
+          emit('select', i === undefined || i === props.selected ? null : i)
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -67,7 +77,7 @@ useChart(
       plugins: [centerText],
     }
   },
-  () => [props.items, props.total, props.caption],
+  () => [props.items, props.total, props.caption, props.selected],
 )
 </script>
 

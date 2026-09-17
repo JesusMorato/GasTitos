@@ -6,18 +6,19 @@ import { useData, type GoalInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
 import { useMonth } from '../composables/useMonth'
 import { useConfirm } from '../composables/useConfirm'
-import { computeBalance, formatDate, formatEur, lastMonths, monthOf, paidByMember, shortMonth, sum, totalsBy, totalsByMonth } from '../lib/money'
+import { computeBalance, formatDate, formatEur, lastMonths, monthOf, paidByMember, shortMonth, sum, totalsByMonth } from '../lib/money'
 import { cssVar } from '../lib/charts'
+import { breakdownBy } from '../lib/breakdown'
 import type { Contribution, SavingsGoal, Settlement } from '../types'
 import SegmentedControl from '../components/SegmentedControl.vue'
 import BalanceCard from '../components/BalanceCard.vue'
 import ExpenseList from '../components/ExpenseList.vue'
-import CategoryIcon from '../components/CategoryIcon.vue'
 import EmptyState from '../components/EmptyState.vue'
 import SettleForm from '../components/SettleForm.vue'
 import GoalForm from '../components/GoalForm.vue'
 import GoalCard from '../components/GoalCard.vue'
 import DonutChart from '../components/DonutChart.vue'
+import CategoryBreakdown from '../components/CategoryBreakdown.vue'
 import MonthlyBars from '../components/MonthlyBars.vue'
 import BudgetCard from '../components/BudgetCard.vue'
 import PendingRecurring from '../components/PendingRecurring.vue'
@@ -73,7 +74,18 @@ const paidBars = computed(() =>
 const potAll = computed(() => rows.value.filter((e) => e.is_shared && e.funding === 'pot'))
 const potMonth = computed(() => potAll.value.filter((e) => monthOf(e.spent_on) === month.value))
 const potTotal = computed(() => sum(potMonth.value.map((e) => e.amount)))
-const potByCategory = computed(() => totalsBy(potMonth.value, (e) => e.category_id, (e) => e.amount))
+// Por categoría, con los gastos que componen cada una (se despliegan al pulsar).
+const potByCategory = computed(() =>
+  breakdownBy(
+    potMonth.value.map((e) => ({
+      key: e.category_id,
+      id: e.id,
+      label: e.description || data.categoryById.value[e.category_id]?.name || 'Gasto',
+      date: e.spent_on,
+      amount: e.amount,
+    })),
+  ),
+)
 const potDonut = computed(() =>
   potByCategory.value.map((c) => ({
     label: data.categoryById.value[c.key]?.name ?? 'Otros',
@@ -81,6 +93,14 @@ const potDonut = computed(() =>
     color: data.categoryById.value[c.key]?.color ?? '#7a857f',
   })),
 )
+const openPot = ref<string | null>(null)
+const selectedPotIdx = computed(() => {
+  const i = potByCategory.value.findIndex((c) => c.key === openPot.value)
+  return i < 0 ? null : i
+})
+function selectPotSlice(i: number | null) {
+  openPot.value = i === null ? null : (potByCategory.value[i]?.key ?? null)
+}
 const potBars = computed(() => [{ label: 'Conjunta', values: totalsByMonth(potAll.value, months6.value) }])
 const potLimit = computed(() => data.potBudget.value?.monthly_limit ?? null)
 const potPending = computed(() => data.pendingRuns.value.filter((p) => p.recurring.kind === 'pot'))
@@ -266,14 +286,8 @@ async function deleteContribution(c: Contribution) {
 
       <div class="card">
         <template v-if="potByCategory.length">
-          <DonutChart :items="potDonut" :total="potTotal" caption="conjunta" />
-          <ul class="donut-legend" :class="{ scrolling: potByCategory.length > 5 }">
-            <li v-for="c in potByCategory" :key="c.key" :style="{ '--dot': data.categoryById.value[c.key]?.color }">
-              <span class="dot" />
-              <span class="name"><CategoryIcon variant="inline" :icon="data.categoryById.value[c.key]?.icon" :emoji="data.categoryById.value[c.key]?.emoji" :color="data.categoryById.value[c.key]?.color" />{{ data.categoryById.value[c.key]?.name }}</span>
-              <span class="val">{{ formatEur(c.total) }}</span>
-            </li>
-          </ul>
+          <DonutChart :items="potDonut" :total="potTotal" caption="conjunta" :selected="selectedPotIdx" @select="selectPotSlice" />
+          <CategoryBreakdown v-model:open="openPot" :rows="potByCategory" :category-by-id="data.categoryById.value" />
         </template>
         <div v-else class="empty">Nada pagado con la cuenta conjunta este mes.</div>
       </div>

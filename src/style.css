@@ -354,6 +354,31 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 0.9rem 0; }
 .donut-legend .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--dot); }
 .donut-legend .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .donut-legend .val { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+/* Leyenda desplegable (CategoryBreakdown.vue): al abrir una categoría salen sus gastos */
+.donut-legend.has-open { grid-template-columns: 1fr; }
+.donut-legend li.expandable { display: block; padding: 0; }
+.legend-toggle {
+  display: flex; align-items: center; gap: 0.55rem; width: 100%; min-width: 0;
+  padding: 0.45rem 0; border: 0; border-radius: 8px; background: transparent;
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.legend-toggle:hover { background: var(--surface-2); }
+.legend-toggle .chevron { color: var(--ink-3); flex: none; transition: transform 0.3s ease; }
+li.expandable.open .chevron { transform: rotate(180deg); }
+li.expandable.open .dot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 30%, transparent); }
+.fold { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.32s ease; }
+li.expandable.open .fold { grid-template-rows: 1fr; }
+.fold-inner { overflow: hidden; min-height: 0; }
+.donut-legend .breakdown {
+  list-style: none; margin: 0 0 0.6rem 0.3rem; padding: 0 0 0 0.75rem; font-size: 0.86rem; display: block;
+  border-left: 2px solid color-mix(in srgb, var(--dot) 45%, transparent);
+}
+.donut-legend .breakdown li { display: flex; gap: 0.5rem; align-items: baseline; padding: 0.22rem 0; border-top: 0; min-width: 0; }
+.donut-legend .breakdown li.sum { border-top: 1px dashed var(--line); margin-top: 0.2rem; padding-top: 0.4rem; }
+@media (prefers-reduced-motion: no-preference) {
+  li.expandable.open .breakdown li { animation: bd-in 0.28s ease both; animation-delay: calc(80ms + var(--i, 0) * 45ms); }
+  @keyframes bd-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+}
 .year-link { display: inline-flex; align-items: center; gap: 0.2rem; margin-top: 0.6rem; font-size: 0.85rem; font-weight: 600; color: var(--accent-ink); text-decoration: none; min-height: 36px; }
 .dot-legend { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; margin-right: 0.2rem; }
 
