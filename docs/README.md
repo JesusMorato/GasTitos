@@ -15,6 +15,19 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-17 · v0.5 — el cerdito.**
+
+- Botón discreto con la cara del cerdito en la barra superior, junto a Ajustes. Abre una
+  conversación con tres preguntas preparadas: "¿Cómo voy este mes?", "¿En qué gasto más?" y
+  "¿Dónde puedo ahorrar?". **No es una IA**: son reglas sobre "lo mío" (personal + mi parte
+  de repartidos + mi % de la conjunta) en `lib/insights.ts`, con tests. Compara con el mes
+  pasado *a estas alturas* (mismo día), avisa del límite, propone recortar el mayor gasto
+  variable, cuánto pesan los fijos y cuánto meter en cada hucha con fecha.
+- Puntito rojo en el botón solo si hay algo importante (límite superado o por encima del ritmo,
+  subidas grandes) que no se ha visto; se recuerda en el navegador (`composables/useInsights.ts`).
+- Idea futura: chat con IA de verdad mediante una Edge Function de Supabase que guarde la
+  clave y reciba solo estos resúmenes.
+
 **2026-09-17 · v0.4.2 — mejoras tras las pruebas: fijos personales, más iconos y tacto.**
 
 - **Gastos fijos personales en la vista Yo**: tarjeta "Mis gastos fijos" con botón

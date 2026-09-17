@@ -89,6 +89,13 @@ gráficas respetan `.space-yo` / `.space-pareja` y el modo oscuro. Chart.js nece
 colores en hex, no `var()`: convierte con `withAlpha` o lee la variable resuelta.
 Componentes: `DonutChart`, `MonthlyBars`, `BudgetChart` (dentro de `BudgetCard`).
 
+## El cerdito (consejos)
+
+Botón con la cara del cerdito junto a Ajustes (`components/PiggyAdvisor.vue`). No es una IA:
+los mensajes salen de reglas puras en `src/lib/insights.ts` (testeadas) sobre "lo mío"
+(`myItems`, que también usa la vista Yo). Nuevos consejos = nueva regla + test ahí.
+Solo usa datos del propio usuario.
+
 ## Iconos e ilustraciones (regla de estilo, 2026-09-16)
 
 - **Nada de emojis en la interfaz de la app**: ni en botones (ajustes, añadir, menú),
