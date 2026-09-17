@@ -5,6 +5,7 @@ import { useData, type GoalInput, type RecurringInput } from '../composables/use
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
 import { useMonth } from '../composables/useMonth'
 import { formatEur, lastMonths, monthOf, myShareTotal, round2, shortMonth, sum, totalsBy, totalsByMonth } from '../lib/money'
+import { myItems } from '../lib/insights'
 import type { Contribution, RecurringExpense, SavingsGoal } from '../types'
 import ExpenseList from '../components/ExpenseList.vue'
 import CategoryIcon from '../components/CategoryIcon.vue'
@@ -35,26 +36,9 @@ const myPct = computed(() => (me.value?.share_pct ?? 50) / 100)
 const rows = computed<ExpenseRow[]>(() => data.expensesWithShares.value)
 const monthRows = computed(() => rows.value.filter((e) => monthOf(e.spent_on) === month.value))
 
-/**
- * "Lo mío": cada gasto personal entero, mi parte de cada repartido y mi
- * porcentaje del hogar de lo pagado con la cuenta conjunta. Es el agregado que
- * usan la cifra del mes, el donut, el límite y las barras.
- */
-interface MyItem { spent_on: string; amount: number; category_id: string }
-const myItemsAll = computed<MyItem[]>(() => {
-  const out: MyItem[] = []
-  for (const e of rows.value) {
-    if (!e.is_shared) {
-      if (e.user_id === userId.value) out.push({ spent_on: e.spent_on, amount: e.amount, category_id: e.category_id })
-    } else if (e.funding === 'pot') {
-      out.push({ spent_on: e.spent_on, amount: round2(e.amount * myPct.value), category_id: e.category_id })
-    } else {
-      const mine = e.shares.find((s) => s.user_id === userId.value)?.amount ?? 0
-      if (mine > 0) out.push({ spent_on: e.spent_on, amount: mine, category_id: e.category_id })
-    }
-  }
-  return out
-})
+// "Lo mío" (ver lib/insights.ts): es el agregado que usan la cifra del mes, el donut,
+// el límite y las barras, y también el cerdito.
+const myItemsAll = computed(() => myItems(rows.value, userId.value, myPct.value))
 const myItemsMonth = computed(() => myItemsAll.value.filter((x) => monthOf(x.spent_on) === month.value))
 
 const myExpenses = computed(() => monthRows.value.filter((e) => !e.is_shared && e.user_id === userId.value))
