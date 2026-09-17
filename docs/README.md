@@ -19,8 +19,8 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 - **Gastos fijos personales en la vista Yo**: tarjeta "Mis gastos fijos" con botón
   "+ Fijo" (gimnasio, móvil, suscripciones…). Se apuntan solos cada mes como gasto
-  personal privado. Lista reutilizable  (también en Ajustes);
-   admite  para ocultar el selector de tipo.
+  personal privado. Lista reutilizable `components/RecurringList.vue` (también en Ajustes);
+  `RecurringForm` admite `fixed-kind` para ocultar el selector de tipo.
 - **56 iconos de categoría** (antes 10) en 7 grupos, con nombre bajo cada icono y caja con
   scroll en el selector. Al elegir un icono con el nombre vacío, se rellena solo. Las 10
   claves de serie no cambian.
