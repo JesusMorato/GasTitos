@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData, type GoalInput, type RecurringInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
@@ -26,6 +27,7 @@ const data = useData()
 const editor = useEditor()
 const { month } = useMonth()
 const { confirm } = useConfirm()
+const router = useRouter()
 
 const showGoalForm = ref(false)
 const editingGoal = ref<SavingsGoal | undefined>()
@@ -172,6 +174,7 @@ async function deleteContribution(c: Contribution) {
         <span class="tiny">personal + repartido + conjunta</span>
       </div>
       <MonthlyBars :labels="labels6" :datasets="bars6" average :highlight="5" />
+      <router-link :to="{ name: 'year' }" class="year-link">Ver el resumen del año <UiIcon name="chevronRight" :size="16" /></router-link>
     </div>
 
     <p v-if="data.error.value || actionError" class="error">{{ actionError ?? data.error.value }}</p>
@@ -179,7 +182,10 @@ async function deleteContribution(c: Contribution) {
     <div class="card">
       <div class="section-title" style="margin-top: 0">
         <h2>Mis gastos <span v-if="fixedCount" class="tag muted" style="margin-left: 0.3rem"><UiIcon name="repeat" :size="12" /> {{ fixedCount }} fijos</span></h2>
-        <button type="button" class="small secondary" @click="editor.openNew('personal')">+ Añadir</button>
+        <div class="row" style="gap: 0.1rem">
+          <button type="button" class="icon" title="Buscar gastos" aria-label="Buscar gastos" @click="router.push({ name: 'search', query: { tipo: 'personal' } })"><UiIcon name="search" :size="20" /></button>
+          <button type="button" class="small secondary" @click="editor.openNew('personal')">+ Añadir</button>
+        </div>
       </div>
       <p class="tiny" style="margin-bottom: 0.5rem">Privados por defecto. Con los tres puntos de cada gasto puedes hacerlo visible para tu pareja, solo lectura.</p>
       <ExpenseList

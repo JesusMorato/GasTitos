@@ -17,11 +17,11 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 **2026-09-17 · v0.6 — resumen del año, buscador y mover categorías en bloque.**
 
-- **Resumen del año** (`views/YearView.vue`, icono de calendario a la izquierda del mes):
+- **Resumen del año** (`views/YearView.vue`, enlace "Ver el resumen del año" bajo las barras de 6 meses en Yo y Pareja, con botón Volver):
   pestañas Yo / Pareja, total y media mensual, mes más alto, barras de los 12 meses
   (en Pareja, repartido + conjunta apiladas y quién pagó), donut y lista por categoría con
   % y media al mes, y lo metido en huchas ese año.
-- **Buscar gastos** (`views/SearchView.vue`, lupa a la derecha del mes): texto sin tildes en
+- **Buscar gastos** (`views/SearchView.vue`, lupa junto a "+ Añadir" encima de cada lista de gastos; llega con el tipo ya marcado): texto sin tildes en
   nota y categoría, tipo, categorías e importe mínimo/máximo, en todos los meses. Resultados
   agrupados por mes con total; editables (los públicos de la pareja, solo lectura).
   Filtro puro en `lib/search.ts` con tests.

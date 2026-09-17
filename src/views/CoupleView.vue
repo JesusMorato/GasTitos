@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData, type GoalInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
@@ -29,6 +30,7 @@ const data = useData()
 const editor = useEditor()
 const { month } = useMonth()
 const { confirm } = useConfirm()
+const router = useRouter()
 
 const tab = ref<Tab>('split')
 const tabs: Array<{ value: Tab; label: string }> = [
@@ -179,12 +181,16 @@ async function deleteContribution(c: Contribution) {
         <div class="row tiny" style="gap: 1rem; margin-top: 0.4rem">
           <span v-for="(m, i) in state.members" :key="m.user_id"><span class="dot-legend" :style="{ background: `var(${memberVars[i] ?? '--accent'})` }" /> {{ m.display_name }}</span>
         </div>
+        <router-link :to="{ name: 'year' }" class="year-link">Ver el resumen del año <UiIcon name="chevronRight" :size="16" /></router-link>
       </div>
 
       <div class="card">
         <div class="section-title" style="margin-top: 0">
           <h2>Gastos repartidos</h2>
-          <button type="button" class="small secondary" :disabled="!partner" @click="editor.openNew('shared')">+ Añadir</button>
+          <div class="row" style="gap: 0.1rem">
+            <button type="button" class="icon" title="Buscar gastos" aria-label="Buscar gastos" @click="router.push({ name: 'search', query: { tipo: 'shared' } })"><UiIcon name="search" :size="20" /></button>
+            <button type="button" class="small secondary" :disabled="!partner" @click="editor.openNew('shared')">+ Añadir</button>
+          </div>
         </div>
         <ExpenseList
           :expenses="splitMonth"
@@ -279,12 +285,16 @@ async function deleteContribution(c: Contribution) {
           <h2>Cuenta conjunta, últimos 6 meses</h2>
         </div>
         <MonthlyBars :labels="labels6" :datasets="potBars" average :highlight="5" />
+        <router-link :to="{ name: 'year' }" class="year-link">Ver el resumen del año <UiIcon name="chevronRight" :size="16" /></router-link>
       </div>
 
       <div class="card">
         <div class="section-title" style="margin-top: 0">
           <h2>Gastos de la cuenta conjunta <span v-if="potFixedCount" class="tag muted" style="margin-left: 0.3rem"><UiIcon name="repeat" :size="12" /> {{ potFixedCount }} fijos</span></h2>
-          <button type="button" class="small secondary" @click="editor.openNew('pot')">+ Añadir</button>
+          <div class="row" style="gap: 0.1rem">
+            <button type="button" class="icon" title="Buscar gastos" aria-label="Buscar gastos" @click="router.push({ name: 'search', query: { tipo: 'pot' } })"><UiIcon name="search" :size="20" /></button>
+            <button type="button" class="small secondary" @click="editor.openNew('pot')">+ Añadir</button>
+          </div>
         </div>
         <ExpenseList
           :expenses="potMonth"

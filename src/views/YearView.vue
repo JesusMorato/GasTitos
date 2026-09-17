@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData } from '../composables/useData'
 import { useMonth } from '../composables/useMonth'
@@ -19,6 +20,12 @@ type Scope = 'yo' | 'pareja'
 const { state, me, partner } = useSession()
 const data = useData()
 const { month } = useMonth()
+const router = useRouter()
+// Vuelve a la pantalla anterior (o a Yo si se abrió el enlace directamente)
+function goBack() {
+  if (window.history.length > 1) router.back()
+  else router.push({ name: 'personal' })
+}
 
 onMounted(() => data.ensureLoaded(state.user?.id))
 
@@ -101,6 +108,7 @@ const savedTotal = computed(() => round2(goals.value.reduce((a, g) => a + g.net,
 
 <template>
   <div :class="scope === 'yo' ? 'space-yo' : 'space-pareja'" class="stack">
+    <button type="button" class="back-link" @click="goBack"><UiIcon name="chevronLeft" :size="18" /> Volver</button>
     <div class="row between">
       <h1>Resumen del año</h1>
       <div class="row" style="gap: 0.1rem">

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
@@ -15,6 +16,12 @@ const { state, nameOf } = useSession()
 const data = useData()
 const editor = useEditor()
 const { confirm } = useConfirm()
+const router = useRouter()
+const route = useRoute()
+function goBack() {
+  if (window.history.length > 1) router.back()
+  else router.push({ name: 'personal' })
+}
 
 onMounted(() => {
   data.ensureLoaded(state.user?.id)
@@ -23,6 +30,9 @@ onMounted(() => {
 
 const input = ref<HTMLInputElement | null>(null)
 const filter = reactive<SearchFilter>({ ...EMPTY_FILTER, categoryIds: [], kinds: [] })
+// Desde la lupa de una lista se llega con el tipo ya marcado (?tipo=personal|shared|pot)
+const preset = String(route.query.tipo ?? '')
+if (preset === 'personal' || preset === 'shared' || preset === 'pot') filter.kinds.push(preset)
 const showMore = ref(false)
 const actionError = ref<string | null>(null)
 
@@ -71,6 +81,7 @@ function togglePublic(x: ExpenseRow) {
 
 <template>
   <div class="space-yo stack">
+    <button type="button" class="back-link" @click="goBack"><UiIcon name="chevronLeft" :size="18" /> Volver</button>
     <h1>Buscar gastos</h1>
 
     <div class="card">
