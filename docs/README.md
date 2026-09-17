@@ -156,12 +156,50 @@ se creó el 2026-09-15.
 
 ## Pendiente / ideas
 
-El plan completo por fases está en `PLAN.md`. Lo de abajo son ideas sueltas anteriores.
+El plan completo por fases está en `PLAN.md`.
 
-- Reparto distinto de 50/50.
-- Gastos recurrentes (alquiler, suscripciones).
-- Exportar a CSV.
+### TAREA PENDIENTE · Pagos detectados con Apple Pay (apuntada 2026-09-17)
+
+**Idea:** que los pagos hechos con el móvil lleguen solos a GasTitos y, al abrir la app,
+aparezcan en una tarjeta "Pagos detectados" para apuntarlos de un toque
+(Personal / Conjunta / Repartido) o descartarlos.
+
+**Contexto:** los dos tenéis iPhone. Cuentas personales en Bankinter (cada uno la suya) y
+cuenta conjunta en Revolut.
+
+**Decisión:** no usar SMS. Una web no puede leerlos y Revolut solo avisa con notificaciones
+de su app, que el iPhone no deja leer. En su lugar, la automatización **"Transacción"** de
+la app Atajos (iOS 17+), que salta al pagar con una tarjeta de la Cartera y da importe,
+comercio y nombre de la tarjeta.
+
+**Paso 0 (lo hace el dueño, antes de programar nada):** comprobar que el aviso salta con
+las dos tarjetas.
+1. Atajos → Automatización → + → **Transacción**.
+2. Marcar las tarjetas de Bankinter y Revolut → **Ejecutar inmediatamente** → Siguiente.
+3. Nuevo atajo en blanco → acción **Mostrar notificación** con la variable **Entrada del atajo**.
+4. Pagar algo pequeño con Apple Pay con cada tarjeta y anotar qué texto sale (tapando
+   números de tarjeta).
+Si solo funciona con una tarjeta, buscar otra vía para la otra (p. ej. SMS de alertas de
+Bankinter).
+
+**Plan técnico (cuando el paso 0 funcione):**
+- Migración nueva: tabla `detected_payments` (usuario, importe, comercio, tarjeta, fecha,
+  estado pendiente/apuntado/descartado, `expense_id`) con RLS: cada uno solo ve los suyos.
+  Tabla o columna para un **código secreto por usuario** que usa el atajo.
+- Edge Function de Supabase que recibe el POST del atajo, valida el código y guarda el pago.
+- Tipo propuesto según la tarjeta: Bankinter → Personal, Revolut → Conjunta (configurable
+  en Ajustes). Categoría sugerida recordando la última elegida para ese comercio.
+- Tarjeta "Pagos detectados" arriba en Yo: botones Personal / Conjunta apuntan directo con
+  `save_expense`; Repartido abre el formulario relleno; ✕ descarta.
+- Guía paso a paso para crear el atajo definitivo en cada iPhone (acción "Obtener contenido
+  de URL" con el importe, comercio, tarjeta y el código).
+- Límite conocido: no pilla pagos con tarjeta física, compras online sin Apple Pay ni
+  recibos (esos ya van por gastos fijos).
+
+### Ideas sueltas anteriores
+
 - Avisos cuando un objetivo se cumple o vence.
+- Chat con IA de verdad para el cerdito (Edge Function con la clave; solo resúmenes).
 - Modo oscuro.
 
 ## Cómo trabajar
