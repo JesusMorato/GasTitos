@@ -147,6 +147,7 @@ testeados.
 | start_month | primer mes `YYYY-MM` |
 | split_mode / custom_pct | reparto, solo para `shared` (sin "importes exactos") |
 | active | pausado = false |
+| active_since | (0007) mes `YYYY-MM` desde el que vuelve a contar tras reactivarlo; lo pone un trigger. Los meses en pausa no se rellenan |
 
 No hay día del mes: al abrir la app en un mes nuevo, `run_recurring(mes)` recorre los
 fijos activos y, por cada mes que toque (según `every_n_months` desde `start_month`)

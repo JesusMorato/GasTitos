@@ -79,6 +79,8 @@ export function useSession() {
     supabase.auth.onAuthStateChange((event, session) => {
       // No hacemos await aquí: Supabase recomienda no bloquear este callback.
       if (event === 'PASSWORD_RECOVERY') state.recovery = true
+      // Un simple refresco del token no cambia nada: no hace falta volver a pedir el hogar.
+      if (event === 'TOKEN_REFRESHED' && state.ready && session?.user?.id === state.user?.id) return
       applySession(session)
     })
   }

@@ -15,6 +15,21 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-17 · v0.5.1 — revisión: arreglos tras repasar el código.**
+
+- Supabase devuelve como mucho 1000 filas por consulta: con los años faltarían gastos
+  antiguos y el balance saldría mal. Ahora se cargan por páginas (`fetchAll` en `useData`).
+- Al cerrar sesión y entrar con la otra cuenta en el mismo móvil se veían los datos del
+  usuario anterior hasta recargar: los datos se vacían al cerrar sesión o cambiar de usuario.
+- Reactivar un gasto fijo pausado creaba de golpe los gastos de los meses en pausa.
+  Migración `0007_fijos_pausados.sql`: columna `active_since` (la pone un trigger) y
+  `run_recurring` salta los meses anteriores.
+- Al volver a la app (desbloquear el móvil) se recargan los datos si tienen más de un
+  minuto: aparecen los gastos de la pareja y los fijos de un mes nuevo sin recargar la web.
+- El límite decía "Mes cerrado" el último día del mes. Mensajes claros al repetir el
+  nombre de una categoría o borrar una con gastos fijos. Los pendientes sin importe
+  anterior empiezan vacíos en vez de con 0.
+
 **2026-09-17 · v0.5 — el cerdito.**
 
 - Botón discreto con la cara del cerdito en la barra superior, junto a Ajustes. Abre una

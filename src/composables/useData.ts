@@ -8,6 +8,23 @@ import type {
 } from '../types'
 import { goalBalance, monthOf, todayIso, type Share } from '../lib/money'
 
+// Supabase devuelve como mucho 1000 filas por consulta. Con los años una pareja
+// pasa de ahí (y el balance necesita TODOS los repartidos), así que se pide por
+// páginas hasta que venga una incompleta.
+const PAGE = 1000
+type Row = Record<string, unknown>
+interface PagedQuery { range: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }> }
+async function fetchAll(build: () => PagedQuery): Promise<Row[]> {
+  const out: Row[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error: e } = await build().range(from, from + PAGE - 1)
+    fail(e)
+    const rows = data ?? []
+    out.push(...rows)
+    if (rows.length < PAGE) return out
+  }
+}
+
 const recurring = ref<RecurringExpense[]>([])
 const runs = ref<RecurringRun[]>([])
 let recurringRanFor = ''
@@ -22,6 +39,8 @@ const budgets = ref<Budget[]>([])
 const loading = ref(false)
 const loaded = ref(false)
 const error = ref<string | null>(null)
+let loadedAt = 0
+let loadedFor = '' // usuario al que pertenecen los datos cargados
 
 function fail(e: { message: string } | null) {
   if (e) {
@@ -42,34 +61,45 @@ async function loadAll() {
   error.value = null
   try {
     const [e, s, c, st, g, gc, b, rc, rr] = await Promise.all([
-      supabase.from('expenses').select('*').order('spent_on', { ascending: false }).order('created_at', { ascending: false }),
-      supabase.from('expense_shares').select('*'),
-      supabase.from('categories').select('*').order('sort_order', { ascending: true }).order('name', { ascending: true }),
-      supabase.from('settlements').select('*').order('settled_on', { ascending: false }).order('created_at', { ascending: false }),
-      supabase.from('savings_goals').select('*').order('created_at', { ascending: true }),
-      supabase.from('goal_contributions').select('*').order('contributed_on', { ascending: false }),
-      supabase.from('budgets').select('*'),
-      supabase.from('recurring_expenses').select('*').order('created_at', { ascending: true }),
-      supabase.from('recurring_runs').select('*'),
+      fetchAll(() => supabase.from('expenses').select('*').order('spent_on', { ascending: false }).order('created_at', { ascending: false })),
+      fetchAll(() => supabase.from('expense_shares').select('*').order('expense_id').order('user_id')),
+      fetchAll(() => supabase.from('categories').select('*').order('sort_order', { ascending: true }).order('name', { ascending: true })),
+      fetchAll(() => supabase.from('settlements').select('*').order('settled_on', { ascending: false }).order('created_at', { ascending: false })),
+      fetchAll(() => supabase.from('savings_goals').select('*').order('created_at', { ascending: true })),
+      fetchAll(() => supabase.from('goal_contributions').select('*').order('contributed_on', { ascending: false }).order('created_at', { ascending: false })),
+      fetchAll(() => supabase.from('budgets').select('*').order('id')),
+      fetchAll(() => supabase.from('recurring_expenses').select('*').order('created_at', { ascending: true })),
+      fetchAll(() => supabase.from('recurring_runs').select('*').order('id')),
     ])
-    fail(e.error); fail(s.error); fail(c.error); fail(st.error); fail(g.error); fail(gc.error); fail(b.error); fail(rc.error); fail(rr.error)
-    budgets.value = (b.data ?? []).map((r) => num(r, ['monthly_limit'])) as Budget[]
-    recurring.value = ((rc.data ?? []) as Record<string, unknown>[]).map((r) => ({
+    budgets.value = b.map((r) => num(r, ['monthly_limit'])) as unknown as Budget[]
+    recurring.value = rc.map((r) => ({
       ...r,
       amount: r.amount == null ? null : Number(r.amount),
       custom_pct: r.custom_pct == null ? null : Number(r.custom_pct),
     })) as unknown as RecurringExpense[]
-    runs.value = (rr.data ?? []) as RecurringRun[]
-    expenses.value = (e.data ?? []).map((r) => num(r, ['amount'])) as Expense[]
-    shares.value = (s.data ?? []).map((r) => num(r, ['amount'])) as ExpenseShare[]
-    categories.value = (c.data ?? []) as Category[]
-    settlements.value = (st.data ?? []).map((r) => num(r, ['amount'])) as Settlement[]
-    goals.value = ((g.data ?? []) as Record<string, unknown>[]).map((r) => ({ ...r, target_amount: r.target_amount == null ? null : Number(r.target_amount) })) as unknown as SavingsGoal[]
-    contributions.value = (gc.data ?? []).map((r) => num(r, ['amount'])) as Contribution[]
+    runs.value = rr as unknown as RecurringRun[]
+    expenses.value = e.map((r) => num(r, ['amount'])) as unknown as Expense[]
+    shares.value = s.map((r) => num(r, ['amount'])) as unknown as ExpenseShare[]
+    categories.value = c as unknown as Category[]
+    settlements.value = st.map((r) => num(r, ['amount'])) as unknown as Settlement[]
+    goals.value = g.map((r) => ({ ...r, target_amount: r.target_amount == null ? null : Number(r.target_amount) })) as unknown as SavingsGoal[]
+    contributions.value = gc.map((r) => num(r, ['amount'])) as unknown as Contribution[]
     loaded.value = true
+    loadedAt = Date.now()
   } finally {
     loading.value = false
   }
+}
+
+/** Vacía todo lo cargado (al cerrar sesión o cambiar de usuario). */
+function reset() {
+  expenses.value = []; shares.value = []; categories.value = []; settlements.value = []
+  goals.value = []; contributions.value = []; budgets.value = []; recurring.value = []; runs.value = []
+  loaded.value = false
+  error.value = null
+  loadedAt = 0
+  loadedFor = ''
+  recurringRanFor = ''
 }
 
 export interface ExpenseInput {
@@ -139,9 +169,31 @@ export function useData() {
     expenses.value.map((e) => ({ ...e, shares: sharesByExpense.value[e.id] ?? [] })),
   )
 
-  function ensureLoaded() {
+  /**
+   * Carga los datos si no están (o si son de otro usuario: p. ej. tras cerrar
+   * sesión y entrar con la otra cuenta en el mismo móvil).
+   */
+  function ensureLoaded(userId?: string) {
+    if (userId && loadedFor && loadedFor !== userId) reset()
+    if (userId) loadedFor = userId
     if (!loaded.value && !loading.value) return syncRecurring().then(loadAll).catch(() => {})
     return Promise.resolve()
+  }
+
+  /**
+   * Al volver a la app (cambio de pestaña, desbloquear el móvil) recarga si los
+   * datos tienen más de un minuto: así se ven los gastos que apuntó la pareja y,
+   * en un mes nuevo, se procesan los gastos fijos sin tener que recargar la página.
+   */
+  async function refreshIfStale(maxAgeMs = 60_000) {
+    if (!loaded.value || loading.value) return
+    if (Date.now() - loadedAt < maxAgeMs) return
+    try {
+      await syncRecurring()
+      await loadAll()
+    } catch {
+      // Se reintentará en la próxima vuelta a la app.
+    }
   }
 
   // ---- gastos fijos ------------------------------------------
@@ -218,25 +270,30 @@ export function useData() {
   }
 
   // ---- categorías --------------------------------------------
+  function categoryError(e: { message: string } | null) {
+    if (e && /duplicate key|unique/i.test(e.message)) throw new Error('Ya hay una categoría con ese nombre.')
+    fail(e)
+  }
+
   async function addCategory(householdId: string, input: Pick<Category, 'name' | 'emoji' | 'color' | 'icon'>) {
     const sort = (categories.value.at(-1)?.sort_order ?? 0) + 10
     const { error: e } = await supabase
       .from('categories')
       .insert({ ...input, name: input.name.trim(), household_id: householdId, sort_order: sort })
-    fail(e)
+    categoryError(e)
     await loadAll()
   }
 
   async function updateCategory(id: string, patch: Partial<Pick<Category, 'name' | 'emoji' | 'color' | 'icon' | 'sort_order'>>) {
     const { error: e } = await supabase.from('categories').update(patch).eq('id', id)
-    fail(e)
+    categoryError(e)
     await loadAll()
   }
 
   async function deleteCategory(id: string) {
     const { error: e } = await supabase.from('categories').delete().eq('id', id)
     if (e && /foreign key|violates/i.test(e.message)) {
-      throw new Error('Esta categoría tiene gastos. Muévelos a otra categoría antes de borrarla.')
+      throw new Error('Esta categoría tiene gastos o gastos fijos. Cámbialos a otra categoría antes de borrarla.')
     }
     fail(e)
     await loadAll()
@@ -310,7 +367,7 @@ export function useData() {
     expenses, shares, categories, settlements, goals, contributions, budgets, recurring, runs, loading, loaded, error,
     savedByGoal, sharesByExpense, categoryById, expensesWithShares, potBudget, myBudget, setBudget,
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
-    loadAll, ensureLoaded,
+    loadAll, ensureLoaded, refreshIfStale, reset,
     saveExpense, setExpensePublic, deleteExpense,
     addCategory, updateCategory, deleteCategory,
     addSettlement, deleteSettlement,

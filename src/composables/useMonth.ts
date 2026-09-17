@@ -13,5 +13,9 @@ export function useMonth() {
   function reset() {
     month.value = monthOf(todayIso())
   }
-  return { month, shift, reset, isCurrent: () => month.value === monthOf(todayIso()) }
+  /** ¿Es el mes de hoy? Sin argumento, comprueba el mes seleccionado. */
+  function isCurrent(m: string = month.value) {
+    return m === monthOf(todayIso())
+  }
+  return { month, shift, reset, isCurrent }
 }
