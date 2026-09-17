@@ -104,11 +104,13 @@ async function saveExpense(input: ExpenseInput) {
       </div>
     </div>
     <div v-if="showMonth" class="monthrow">
+      <router-link :to="{ name: 'year' }" class="btn icon side" aria-label="Resumen del año" title="Resumen del año"><UiIcon name="calendar" :size="20" /></router-link>
       <button type="button" class="icon" aria-label="Mes anterior" @click="shift(-1)">‹</button>
       <button type="button" class="ghost month-label" :title="isCurrent() ? '' : 'Volver al mes actual'" @click="reset()">
         {{ formatMonth(month) }}<span v-if="!isCurrent()" class="tag" style="margin-left: 0.4rem">hoy</span>
       </button>
       <button type="button" class="icon" aria-label="Mes siguiente" @click="shift(1)">›</button>
+      <router-link :to="{ name: 'search' }" class="btn icon side" aria-label="Buscar gastos" title="Buscar gastos"><UiIcon name="search" :size="20" /></router-link>
     </div>
   </header>
 
@@ -170,6 +172,9 @@ async function saveExpense(input: ExpenseInput) {
 }
 .brand { display: inline-flex; align-items: center; gap: 0.35rem; }
 .monthrow { max-width: 680px; margin: 0 auto; padding: 0 8px 6px; display: flex; align-items: center; justify-content: center; gap: 0.25rem; }
+.monthrow .side { color: var(--ink-3); }
+.monthrow .side:first-child { margin-right: auto; }
+.monthrow .side:last-child { margin-left: auto; }
 .month-label { font-family: var(--font-display); font-weight: 600; font-size: 1rem; color: var(--ink); min-width: 170px; min-height: 40px; justify-content: center; }
 .monthrow button.icon { font-size: 1.4rem; }
 </style>

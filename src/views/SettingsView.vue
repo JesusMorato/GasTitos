@@ -52,7 +52,7 @@ async function run(fn: () => Promise<void>, okMsg: string) {
   err.value = null
   try {
     await fn()
-    msg.value = okMsg
+    if (okMsg) msg.value = okMsg
   } catch (e) {
     err.value = (e as Error).message
   }
@@ -91,6 +91,7 @@ function openCat(c?: Category) {
   catEmoji.value = c?.emoji ?? '📦'
   catColor.value = c?.color ?? '#7a857f'
   catIcon.value = c?.icon ?? null
+  moveTo.value = ''
   catOpen.value = true
 }
 function saveCat() {
@@ -101,8 +102,42 @@ function saveCat() {
   run(() => (editing ? data.updateCategory(editing.id, input) : data.addCategory(state.household!.id, input)), 'Categoría guardada')
 }
 async function deleteCat(c: Category) {
-  if (await confirm({ title: 'Borrar categoría', message: `¿Borrar la categoría "${c.name}"? Solo se puede si no tiene gastos.` })) run(() => data.deleteCategory(c.id), 'Categoría borrada')
+  const used = data.expenses.value.some((e) => e.category_id === c.id) || data.recurring.value.some((r) => r.category_id === c.id)
+  if (used) {
+    // Con gastos no se puede borrar a secas: se abre la hoja para moverlos primero.
+    openCat(c)
+    return
+  }
+  if (await confirm({ title: 'Borrar categoría', message: `¿Borrar la categoría "${c.name}"?` })) run(() => data.deleteCategory(c.id), 'Categoría borrada')
 }
+// Mover en bloque los gastos de la categoría que se está editando a otra
+const moveTo = ref('')
+const catUsage = computed(() => {
+  const id = catEditing.value?.id
+  if (!id) return 0
+  return data.expenses.value.filter((e) => e.category_id === id).length + data.recurring.value.filter((r) => r.category_id === id).length
+})
+const otherCats = computed(() => data.categories.value.filter((c) => c.id !== catEditing.value?.id))
+async function moveAll(del: boolean) {
+  const from = catEditing.value
+  const to = data.categoryById.value[moveTo.value]
+  if (!from || !to) return
+  const ok = await confirm({
+    title: del ? 'Mover y borrar' : 'Mover gastos',
+    message: del
+      ? `Todos los gastos de "${from.name}" pasan a "${to.name}" y "${from.name}" se borra.`
+      : `Todos los gastos de "${from.name}" (también los de tu pareja) pasan a "${to.name}".`,
+    confirmLabel: del ? 'Mover y borrar' : 'Mover',
+    danger: del,
+  })
+  if (!ok) return
+  catOpen.value = false
+  run(async () => {
+    const n = await data.moveCategory(from.id, to.id, del)
+    msg.value = `${n} ${n === 1 ? 'gasto movido' : 'gastos movidos'} a "${to.name}"${del ? ' y categoría borrada' : ''}`
+  }, '')
+}
+
 function moveCat(c: Category, dir: -1 | 1) {
   const list = data.categories.value
   const i = list.findIndex((x) => x.id === c.id)
@@ -302,6 +337,25 @@ function exportGoals() {
           <button type="submit">Guardar</button>
         </div>
       </form>
+
+      <template v-if="catEditing && otherCats.length">
+        <hr class="sep" />
+        <div class="field">
+          <label for="moveto">Mover sus gastos a otra categoría</label>
+          <p class="tiny" style="margin: 0 0 0.4rem">
+            <template v-if="catUsage">Tiene {{ catUsage }} {{ catUsage === 1 ? 'gasto' : 'gastos' }} (contando fijos y los que ves de tu pareja).</template>
+            <template v-else>No tiene gastos que tú veas; los privados de tu pareja también se moverían.</template>
+          </p>
+          <select id="moveto" v-model="moveTo">
+            <option value="" disabled>Elige la categoría de destino…</option>
+            <option v-for="c in otherCats" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+        <div class="row">
+          <button type="button" class="secondary small" :disabled="!moveTo" @click="moveAll(false)">Mover todos</button>
+          <button type="button" class="danger small" :disabled="!moveTo" @click="moveAll(true)">Mover y borrar categoría</button>
+        </div>
+      </template>
     </Sheet>
   </div>
 </template>

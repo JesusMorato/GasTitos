@@ -162,3 +162,9 @@ RLS: los personales solo los ve su dueño; repartidos y conjunta los ven los dos
 `savings_goals.target_amount` ahora es opcional (hucha sin objetivo = colchón).
 `goal_contributions.direction` (`in` / `out`): saldo = entradas − salidas. Plan
 mensual y proyección en `src/lib/money.ts` (`monthlyPlan`, `projectedMonth`).
+
+## Añadido en 0008
+
+`move_category(p_from, p_to, p_delete)`: pasa todos los gastos y gastos fijos del hogar de una
+categoría a otra (también los personales privados de la pareja, por eso es security definer) y,
+si `p_delete`, borra la de origen. Devuelve cuántas filas ha movido.
