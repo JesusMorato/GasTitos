@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { budgetStatus, cumulativeByDay, dayCursor, daysInMonth, formatEur, formatMonth, round2 } from '../lib/money'
+import { budgetStatus, cumulativeByDay, dayCursor, daysInMonth, formatEur, formatMonth, monthOf, round2, todayIso } from '../lib/money'
 import BudgetChart from './BudgetChart.vue'
 import Sheet from './Sheet.vue'
 
@@ -20,7 +20,7 @@ const days = computed(() => daysInMonth(props.month))
 const day = computed(() => dayCursor(props.month))
 const spent = computed(() => (day.value > 0 ? cumulative.value[day.value - 1] ?? 0 : 0))
 const status = computed(() => (props.limit ? budgetStatus(spent.value, props.limit, day.value, days.value) : null))
-const isCurrent = computed(() => day.value > 0 && day.value < days.value)
+const isCurrent = computed(() => props.month === monthOf(todayIso()))
 
 const stateLabel = computed(() => {
   if (!status.value) return ''
@@ -73,6 +73,9 @@ function remove() {
       <p class="muted tnum" style="margin: 0.5rem 0 0.6rem">
         <template v-if="status.state === 'exceeded'">
           Te has pasado <strong>{{ formatEur(status.exceeded) }}</strong><template v-if="isCurrent"> y quedan {{ status.daysLeft }} días</template>.
+        </template>
+        <template v-else-if="isCurrent && status.daysLeft === 0">
+          Último día del mes: te quedan <strong>{{ formatEur(status.remaining) }}</strong>.
         </template>
         <template v-else-if="isCurrent">
           Te quedan <strong>{{ formatEur(status.remaining) }}</strong> para {{ status.daysLeft }} días · <strong>{{ formatEur(status.perDay) }}/día</strong>

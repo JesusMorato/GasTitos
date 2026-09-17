@@ -6,7 +6,7 @@ import { useData, type ExpenseInput } from './composables/useData'
 import { useEditor } from './composables/useEditor'
 import { useMonth } from './composables/useMonth'
 import { useInsights } from './composables/useInsights'
-import { formatMonth } from './lib/money'
+import { formatMonth, monthOf, todayIso } from './lib/money'
 import QuickAdd from './components/QuickAdd.vue'
 import ExpenseForm from './components/ExpenseForm.vue'
 import PiggyAdvisor from './components/PiggyAdvisor.vue'
@@ -41,6 +41,22 @@ onMounted(() => {
   })
 })
 onBeforeUnmount(() => removeSwipe?.())
+
+// Al volver a la app (desbloquear el móvil, cambiar de pestaña) se recargan los
+// datos si son de hace más de un minuto, y si ha cambiado el mes se vuelve al actual.
+let shownMonth = monthOf(todayIso())
+function onVisible() {
+  if (document.visibilityState !== 'visible' || !inApp.value) return
+  const now = monthOf(todayIso())
+  if (now !== shownMonth) {
+    // Si estaba mirando el mes que era el actual, pasa al nuevo mes actual
+    if (month.value === shownMonth) reset()
+    shownMonth = now
+  }
+  data.refreshIfStale()
+}
+onMounted(() => document.addEventListener('visibilitychange', onVisible))
+onBeforeUnmount(() => document.removeEventListener('visibilitychange', onVisible))
 
 // Al llegar desde el email de recuperación, la app manda a "nueva contraseña".
 watch(() => state.recovery, (r) => { if (r) router.push({ name: 'new-password' }) })

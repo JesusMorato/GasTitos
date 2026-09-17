@@ -17,11 +17,11 @@ export function useInsights() {
   const { state, me } = useSession()
 
   const userId = computed(() => state.user?.id ?? '')
-  const today = todayIso()
 
   const insights = computed(() => {
     if (!userId.value || !data.loaded.value) return []
     const uid = userId.value
+    const today = todayIso()
     const items = myItems(data.expensesWithShares.value, uid, (me.value?.share_pct ?? 50) / 100)
     const fixedMonthly = round2(sum(
       data.recurring.value
@@ -41,7 +41,7 @@ export function useInsights() {
     })
   })
 
-  const signature = computed(() => insightsSignature(insights.value, today))
+  const signature = computed(() => insightsSignature(insights.value, todayIso()))
 
   watch(
     userId,

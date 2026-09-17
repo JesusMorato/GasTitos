@@ -128,6 +128,8 @@ export interface RecurringExpense {
   every_n_months: number
   start_month: string
   active: boolean
+  /** Mes desde el que vuelve a contar tras reactivarlo (null = desde start_month). */
+  active_since: string | null
   created_at: string
 }
 

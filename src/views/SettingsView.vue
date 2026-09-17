@@ -17,7 +17,7 @@ const router = useRouter()
 const { state, me, partner, nameOf, signOut, renameHousehold, renameMe, setMySplit } = useSession()
 const data = useData()
 
-onMounted(() => data.ensureLoaded())
+onMounted(() => data.ensureLoaded(state.user?.id))
 
 const householdName = ref(state.household?.name ?? '')
 const myName = ref(me.value?.display_name ?? '')
@@ -115,6 +115,7 @@ function moveCat(c: Category, dir: -1 | 1) {
 
 async function logout() {
   await signOut()
+  data.reset()
   router.push({ name: 'login' })
 }
 

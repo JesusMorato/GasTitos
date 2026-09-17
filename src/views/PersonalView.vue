@@ -29,7 +29,7 @@ const showGoalForm = ref(false)
 const editingGoal = ref<SavingsGoal | undefined>()
 const actionError = ref<string | null>(null)
 
-onMounted(() => data.ensureLoaded())
+onMounted(() => data.ensureLoaded(state.user?.id))
 
 const userId = computed(() => state.user!.id)
 const myPct = computed(() => (me.value?.share_pct ?? 50) / 100)

@@ -12,7 +12,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ (e: 'resolve', runId: string, amount: number): void; (e: 'skip', runId: string): void }>()
 
-const drafts = reactive<Record<string, number>>({})
+const drafts = reactive<Record<string, number | ''>>({})
 // Pendientes ya enviados: se desactivan sus botones hasta que desaparecen de la
 // lista, para que un doble toque no dé error de "ya no está pendiente".
 const sent = reactive<Record<string, boolean>>({})
@@ -23,8 +23,8 @@ watch(
   },
 )
 
-function draft(id: string, recurringId: string): number {
-  if (!(id in drafts)) drafts[id] = props.lastAmountOf(recurringId) ?? 0
+function draft(id: string, recurringId: string): number | '' {
+  if (!(id in drafts)) drafts[id] = props.lastAmountOf(recurringId) ?? ''
   return drafts[id]
 }
 
@@ -68,7 +68,7 @@ function skip(runId: string) {
               inputmode="decimal"
               placeholder="0,00"
               aria-label="Importe"
-              @input="drafts[it.run.id] = Number(($event.target as HTMLInputElement).value)"
+              @input="drafts[it.run.id] = ($event.target as HTMLInputElement).value === '' ? '' : Number(($event.target as HTMLInputElement).value)"
             />
           </div>
           <button type="submit" class="small" :disabled="sent[it.run.id]">{{ sent[it.run.id] ? 'Apuntando…' : 'Apuntar' }}</button>
