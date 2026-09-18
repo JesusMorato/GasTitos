@@ -46,13 +46,13 @@ Consejo: haz esta parte en el propio iPhone, así puedes copiar y pegar en Atajo
      | Clave        | Valor                                                                 |
      |--------------|-----------------------------------------------------------------------|
      | `p_token`    | pega tu **código secreto**                                            |
-     | `p_amount`   | variable **Entrada del atajo** → propiedad **Importe**                |
-     | `p_merchant` | variable **Entrada del atajo** → propiedad **Comerciante** (según la versión: "Vendedor", "Establecimiento" o, si no hay nada de eso, "Nombre") |
-     | `p_card`     | variable **Entrada del atajo** → propiedad **Tarjeta o pase**         |
+     | `p_amount`   | pastilla **Transacción** → propiedad **Importe**                |
+     | `p_merchant` | pastilla **Transacción** → propiedad **Comerciante** (según la versión: "Vendedor", "Establecimiento" o, si no hay nada de eso, "Nombre") |
+     | `p_card`     | pastilla **Transacción** → propiedad **Tarjeta o pase**         |
 
-     Para poner una variable: toca el campo Valor, elige **"Seleccionar variable"** (o el
-     icono de variable en la barra del teclado) → **Entrada del atajo**. Luego toca esa
-     variable ya insertada y elige la propiedad. En inglés se llaman Amount, Merchant,
+     Para poner una variable: toca el campo Valor y, en la barra que hay encima del
+     teclado, toca la pastilla **Transacción** (es el dato del pago; si no la ves, toca
+     "Seleccionar variable"). Luego toca esa pastilla ya insertada y elige la propiedad. En inglés se llaman Amount, Merchant,
      Card or Pass y Name; en español los nombres varían según la versión de iOS, así que
      escoge el que más se parezca (el "comerciante" es el nombre de la tienda).
 
