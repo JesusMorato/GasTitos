@@ -47,13 +47,14 @@ Consejo: haz esta parte en el propio iPhone, así puedes copiar y pegar en Atajo
      |--------------|-----------------------------------------------------------------------|
      | `p_token`    | pega tu **código secreto**                                            |
      | `p_amount`   | variable **Entrada del atajo** → propiedad **Importe**                |
-     | `p_merchant` | variable **Entrada del atajo** → propiedad **Comercio**               |
-     | `p_card`     | variable **Entrada del atajo** → propiedad **Tarjeta** (o "Nombre de la tarjeta") |
+     | `p_merchant` | variable **Entrada del atajo** → propiedad **Comerciante** (según la versión: "Vendedor", "Establecimiento" o, si no hay nada de eso, "Nombre") |
+     | `p_card`     | variable **Entrada del atajo** → propiedad **Tarjeta o pase**         |
 
      Para poner una variable: toca el campo Valor, elige **"Seleccionar variable"** (o el
      icono de variable en la barra del teclado) → **Entrada del atajo**. Luego toca esa
-     variable ya insertada y elige la propiedad (Importe, Comercio, Tarjeta). Los nombres
-     pueden variar un poco según la versión de iOS; escoge el que más se parezca.
+     variable ya insertada y elige la propiedad. En inglés se llaman Amount, Merchant,
+     Card or Pass y Name; en español los nombres varían según la versión de iOS, así que
+     escoge el que más se parezca (el "comerciante" es el nombre de la tienda).
 
 6. Pulsa **Listo** dos veces. La automatización queda activa.
 
