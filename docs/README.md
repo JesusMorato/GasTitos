@@ -32,8 +32,15 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
   clave, "Enviar un pago de prueba" (mismo camino que el atajo) y tipo propuesto por tarjeta
   (`payment_settings.card_kinds`; sin ajuste, Revolut → Conjunta y el resto → Personal).
 - Migración `0009_pagos_detectados.sql`; `saveExpense` devuelve ahora el id del gasto.
-- **Pendiente de comprobar en el móvil**: qué nombres exactos tienen las propiedades de la
-  transacción en Atajos (Importe / Comercio / Tarjeta) y que salte con las dos tarjetas.
+- Probado el 2026-09-18 con un atajo manual: llega "ok" y el pago sale en Yo. Dentro de la
+  automatización la variable del pago se llama **"Transacción"** (propiedades Importe,
+  Comerciante, Tarjeta o pase). Una compra **online** con Apple Pay NO disparó la
+  automatización: queda por confirmar con un pago físico acercando el móvil.
+- Al volver a la app se consultan siempre los pagos detectados (`refreshPayments`), aunque
+  el resto de datos sea reciente. El pago de prueba lleva importe aleatorio para que no lo
+  descarte el filtro de repetidos (mismo importe y comercio en 2 minutos).
+- Ajustes → Gastos fijos: la lista va en bloques (Cuenta conjunta / Repartidos / Personales),
+  prop `grouped` de `RecurringList`.
 
 **2026-09-18 · v0.6.1 — categorías por arrastre y gastos fijos solo en Ajustes.**
 
