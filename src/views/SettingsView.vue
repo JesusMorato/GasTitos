@@ -274,7 +274,7 @@ function exportGoals() {
         :items="data.recurring.value"
         :category-by-id="data.categoryById.value"
         :name-of="nameOf"
-        show-kind
+        grouped
         empty-text="Aún no hay gastos fijos. Empieza por el alquiler."
         @toggle="toggleRec"
         @edit="openRec"

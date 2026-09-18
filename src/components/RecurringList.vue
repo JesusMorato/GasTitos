@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Category, RecurringExpense } from '../types'
 import { formatEur } from '../lib/money'
 import CategoryIcon from './CategoryIcon.vue'
@@ -6,12 +7,14 @@ import UiIcon from './UiIcon.vue'
 
 // Lista de gastos fijos con pausar / editar / borrar. La usan Ajustes (todos)
 // y la vista Yo (solo los personales).
-defineProps<{
+const props = defineProps<{
   items: RecurringExpense[]
   categoryById: Record<string, Category>
   nameOf: (id: string) => string
   /** Muestra la etiqueta personal/repartido/conjunta. */
   showKind?: boolean
+  /** Separa la lista en bloques: cuenta conjunta, repartidos y personales. */
+  grouped?: boolean
   emptyText: string
 }>()
 const emit = defineEmits<{
@@ -21,6 +24,14 @@ const emit = defineEmits<{
 }>()
 
 const kindLabel: Record<RecurringExpense['kind'], string> = { personal: 'personal', shared: 'repartido', pot: 'conjunta' }
+// Bloques en el orden en que se enseñan (solo los que tienen algo)
+const groupTitle: Record<RecurringExpense['kind'], string> = { pot: 'Cuenta conjunta', shared: 'Repartidos', personal: 'Personales' }
+const groups = computed(() => {
+  if (!props.grouped) return [{ kind: null as RecurringExpense['kind'] | null, items: props.items }]
+  return (['pot', 'shared', 'personal'] as const)
+    .map((kind) => ({ kind, items: props.items.filter((r) => r.kind === kind) }))
+    .filter((g) => g.items.length > 0)
+})
 function everyLabel(n: number) {
   return n === 1 ? 'cada mes' : n === 12 ? 'cada año' : `cada ${n} meses`
 }
@@ -28,8 +39,11 @@ function everyLabel(n: number) {
 
 <template>
   <div v-if="items.length === 0" class="empty">{{ emptyText }}</div>
-  <ul v-else class="list">
-    <li v-for="r in items" :key="r.id" :style="{ opacity: r.active ? 1 : 0.55 }">
+  <template v-else>
+  <div v-for="g in groups" :key="g.kind ?? 'all'" class="rec-group">
+  <div v-if="g.kind" class="rec-group-title">{{ groupTitle[g.kind] }}</div>
+  <ul class="list">
+    <li v-for="r in g.items" :key="r.id" :style="{ opacity: r.active ? 1 : 0.55 }">
       <CategoryIcon :icon="categoryById[r.category_id]?.icon" :emoji="categoryById[r.category_id]?.emoji" :color="categoryById[r.category_id]?.color" />
       <div class="grow">
         <div class="ellipsis"><strong>{{ r.name }}</strong> <span v-if="showKind" class="tag muted">{{ kindLabel[r.kind] }}</span></div>
@@ -45,4 +59,15 @@ function everyLabel(n: number) {
       </div>
     </li>
   </ul>
+  </div>
+  </template>
 </template>
+
+<style scoped>
+.rec-group + .rec-group { margin-top: 0.9rem; }
+.rec-group-title {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ink-3); padding: 0.2rem 0 0.1rem; border-bottom: 1px solid var(--line);
+}
+.rec-group-title + .list li:first-child { border-top: 0; }
+</style>
