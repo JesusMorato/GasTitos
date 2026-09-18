@@ -8,6 +8,9 @@ if (!url || !key) {
 }
 
 export const supabase = createClient(url, key)
+/** URL y clave pública: las necesita el atajo del iPhone (ver Ajustes → Pagos automáticos). */
+export const supabaseUrl: string = url
+export const supabaseAnonKey: string = key
 
 // URL a la que Google/Supabase devuelven al usuario tras el login.
 // En producción: https://jesusmorato.github.io/GasTitos/

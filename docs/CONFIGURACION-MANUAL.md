@@ -87,3 +87,12 @@ allowed" y la app mostrará *"Esta app es privada"*.
 - Android (Chrome): abre la dirección → menú ⋮ → "Instalar aplicación" o "Añadir a
   pantalla de inicio".
 - Si ya la tenías añadida con el icono antiguo, bórrala y vuelve a añadirla.
+
+## 8. Pagos automáticos desde el iPhone (cada persona en su móvil)
+
+- [ ] Esperar a que el workflow "Migraciones Supabase" aplique `0009_pagos_detectados.sql`
+      (Actions en verde).
+- [ ] En cada iPhone: seguir `docs/PAGOS-DETECTADOS.md` (Ajustes → "Activar: crear mi
+      código" y montar la automatización "Transacción" en Atajos). Unos 5 minutos.
+- [ ] Probar primero con "Enviar un pago de prueba" y después con un pago real pequeño
+      con cada tarjeta.

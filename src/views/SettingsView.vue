@@ -4,7 +4,8 @@ import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData, type RecurringInput } from '../composables/useData'
 import { useConfirm } from '../composables/useConfirm'
-import type { Category, RecurringExpense } from '../types'
+import type { Category, PaymentKind, RecurringExpense } from '../types'
+import { supabaseAnonKey, supabaseUrl } from '../supabase'
 import { todayIso } from '../lib/money'
 import { downloadText, toCsv } from '../lib/csv'
 import { indexAtY, moveItem, sortOrderUpdates } from '../lib/reorder'
@@ -182,6 +183,38 @@ function cancelDrag() {
   catOrder.value = [...data.categories.value]
 }
 
+// --- pagos automáticos (atajo del iPhone) ---
+const paymentUrl = `${supabaseUrl}/rest/v1/rpc/register_payment`
+const guideUrl = 'https://github.com/JesusMorato/GasTitos/blob/main/docs/PAGOS-DETECTADOS.md'
+const kindLabels: Record<PaymentKind, string> = { personal: 'Personal', shared: 'Repartido', pot: 'Conjunta' }
+async function copy(text: string, what: string) {
+  try {
+    await navigator.clipboard.writeText(text)
+    msg.value = `${what} copiado`
+    err.value = null
+  } catch {
+    err.value = 'No se ha podido copiar. Mantén pulsado el texto para seleccionarlo.'
+  }
+}
+function activatePayments() {
+  run(() => data.ensurePaymentToken(state.household!.id, state.user!.id), 'Código creado. Ahora sigue la guía para montar el atajo.')
+}
+async function renewToken() {
+  const ok = await confirm({
+    title: 'Nuevo código',
+    message: 'El código de ahora dejará de valer y tendrás que cambiarlo en el atajo del iPhone.',
+    confirmLabel: 'Generar otro',
+    danger: true,
+  })
+  if (ok) run(() => data.ensurePaymentToken(state.household!.id, state.user!.id, true), 'Código nuevo generado')
+}
+function testPayment() {
+  run(() => data.sendTestPayment(), 'Pago de prueba enviado: mira la bolita en "Yo"')
+}
+function setCardKind(card: string, ev: Event) {
+  run(() => data.setCardKind(card, (ev.target as HTMLSelectElement).value as PaymentKind), 'Tarjeta guardada')
+}
+
 async function logout() {
   await signOut()
   data.reset()
@@ -342,6 +375,54 @@ function exportGoals() {
     </div>
 
     <div class="card">
+      <h2>Pagos automáticos (iPhone)</h2>
+      <p class="tiny" style="margin: 0.3rem 0 0.6rem">
+        Al pagar con el móvil (Apple Pay), un atajo del iPhone avisa a GasTitos y el pago aparece en "Yo" para apuntarlo de un toque.
+        <a :href="guideUrl" target="_blank" rel="noopener">Guía paso a paso</a>.
+      </p>
+      <template v-if="!data.paymentSettings.value">
+        <button type="button" class="small" @click="activatePayments">Activar: crear mi código</button>
+      </template>
+      <template v-else>
+        <div class="field">
+          <label>Tu código secreto (solo para tu atajo)</label>
+          <div class="row">
+            <code class="grow secret">{{ data.paymentSettings.value.token }}</code>
+            <button type="button" class="icon" title="Copiar código" aria-label="Copiar código" @click="copy(data.paymentSettings.value!.token, 'Código')"><UiIcon name="copy" :size="18" /></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Dirección a la que manda el atajo</label>
+          <div class="row">
+            <code class="grow secret">{{ paymentUrl }}</code>
+            <button type="button" class="icon" title="Copiar dirección" aria-label="Copiar dirección" @click="copy(paymentUrl, 'Dirección')"><UiIcon name="copy" :size="18" /></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Clave pública (cabecera <em>apikey</em>)</label>
+          <div class="row">
+            <code class="grow secret">{{ supabaseAnonKey }}</code>
+            <button type="button" class="icon" title="Copiar clave" aria-label="Copiar clave" @click="copy(supabaseAnonKey, 'Clave')"><UiIcon name="copy" :size="18" /></button>
+          </div>
+        </div>
+        <div class="row" style="margin-bottom: 0.6rem">
+          <button type="button" class="secondary small" @click="testPayment">Enviar un pago de prueba</button>
+          <button type="button" class="ghost small" @click="renewToken">Generar otro código</button>
+        </div>
+        <div v-if="data.paymentCards.value.length" class="field">
+          <label>Qué proponer según la tarjeta</label>
+          <div v-for="card in data.paymentCards.value" :key="card" class="row" style="margin-bottom: 0.3rem">
+            <span class="grow ellipsis">{{ card }}</span>
+            <select :value="data.kindForCard(card)" @change="setCardKind(card, $event)">
+              <option v-for="(label, k) in kindLabels" :key="k" :value="k">{{ label }}</option>
+            </select>
+          </div>
+          <p class="help">Se marca ese tipo como primer botón, pero siempre puedes elegir otro.</p>
+        </div>
+      </template>
+    </div>
+
+    <div class="card">
       <h2>Tus datos</h2>
       <p class="tiny" style="margin: 0.3rem 0 0.6rem">Descarga una copia en CSV (se abre en Excel). Incluye lo que tú puedes ver: lo tuyo, lo repartido y la cuenta conjunta.</p>
       <div class="row">
@@ -400,6 +481,10 @@ function exportGoals() {
 </template>
 
 <style scoped>
+.secret {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; background: var(--surface-2);
+  padding: 0.45rem 0.6rem; border-radius: var(--r-md); word-break: break-all; min-width: 0;
+}
 .drag-handle {
   display: inline-flex;
   align-items: center;

@@ -15,6 +15,8 @@ const props = defineProps<{
   categories: readonly Category[]
   currentUserId: string
   initial?: Expense & { shares: Share[] }
+  /** Gasto nuevo con valores ya puestos (desde un pago detectado). */
+  prefill?: { amount?: number; description?: string; spent_on?: string; category_id?: string }
   /** Guardando: botón desactivado con "Guardando…". */
   busy?: boolean
 }>()
@@ -30,10 +32,10 @@ function kindOf(x?: Expense): Kind {
 }
 
 const kind = ref<Kind>(kindOf(props.initial))
-const amount = ref<number>(props.initial?.amount ?? 0)
-const spentOn = ref(props.initial?.spent_on ?? todayIso())
-const categoryId = ref(props.initial?.category_id ?? props.categories[0]?.id ?? '')
-const description = ref(props.initial?.description ?? '')
+const amount = ref<number>(props.initial?.amount ?? props.prefill?.amount ?? 0)
+const spentOn = ref(props.initial?.spent_on ?? props.prefill?.spent_on ?? todayIso())
+const categoryId = ref(props.initial?.category_id ?? props.prefill?.category_id ?? props.categories[0]?.id ?? '')
+const description = ref(props.initial?.description ?? props.prefill?.description ?? '')
 const paidBy = ref(props.initial?.is_shared && props.initial.funding === 'personal' ? props.initial.user_id : props.currentUserId)
 const splitMode = ref<SplitMode>(props.initial?.split_mode ?? 'household')
 const customPct = ref<number>(initialCustomPct())

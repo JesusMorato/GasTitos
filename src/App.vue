@@ -68,6 +68,18 @@ const offlineText = computed(() => {
   return ''
 })
 
+// Pagos detectados sin apuntar: bolita en la pestaña "Yo" y en el icono de la app (si está instalada).
+const pendingCount = computed(() => (inApp.value ? data.pendingPayments.value.length : 0))
+watch(pendingCount, (n) => {
+  try {
+    const nav = navigator as Navigator & { setAppBadge?: (n: number) => Promise<void>; clearAppBadge?: () => Promise<void> }
+    if (n > 0) nav.setAppBadge?.(n).catch(() => {})
+    else nav.clearAppBadge?.().catch(() => {})
+  } catch {
+    // El navegador no lo soporta: no pasa nada.
+  }
+}, { immediate: true })
+
 // Al llegar desde el email de recuperación, la app manda a "nueva contraseña".
 watch(() => state.recovery, (r) => { if (r) router.push({ name: 'new-password' }) })
 const showMonth = computed(() => inApp.value && (route.name === 'personal' || route.name === 'couple'))
@@ -79,11 +91,21 @@ async function saveExpense(input: ExpenseInput) {
   const hid = state.household?.id
   if (!hid || editor.state.saving) return
   editor.state.saving = true
+  const fromPayment = editor.state.fromPayment
   try {
-    await data.saveExpense(input)
+    const id = await data.saveExpense(input)
+    let msg = input.id ? 'Gasto actualizado' : 'Gasto guardado'
+    if (fromPayment) {
+      // El gasto ya está guardado: si esto falla, el pago sigue en "detectados" y se avisa.
+      try {
+        await data.markPaymentDone(fromPayment, id)
+      } catch {
+        msg = 'Gasto guardado, pero el pago detectado sigue pendiente'
+      }
+    }
     editor.state.saving = false
     editor.close()
-    editor.toast(input.id ? 'Gasto actualizado' : 'Gasto guardado')
+    editor.toast(msg)
   } catch (e) {
     editor.state.saving = false
     editor.toast(`No se ha podido guardar: ${(e as Error).message}`)
@@ -121,9 +143,10 @@ async function saveExpense(input: ExpenseInput) {
 
   <nav v-if="inApp" class="bottomnav" :style="{ '--nav-accent': navAccent }">
     <div class="inner">
-      <router-link :to="{ name: 'personal' }">
+      <router-link :to="{ name: 'personal' }" class="nav-item">
         <UiIcon name="user" :size="24" />
         Yo
+        <span v-if="pendingCount" class="nav-dot" :aria-label="`${pendingCount} pagos por apuntar`">{{ pendingCount > 9 ? '9+' : pendingCount }}</span>
       </router-link>
       <button type="button" class="fab" aria-label="Añadir gasto" :style="{ '--accent': navAccent }" @click="editor.openQuick()">+</button>
       <router-link :to="{ name: 'couple' }">
@@ -141,6 +164,7 @@ async function saveExpense(input: ExpenseInput) {
     :categories="data.categories.value"
     :current-user-id="state.user.id"
     :initial="editor.state.editing"
+    :prefill="editor.state.prefill"
     :busy="editor.state.saving"
     @save="saveExpense"
     @close="editor.close()"
@@ -164,6 +188,12 @@ async function saveExpense(input: ExpenseInput) {
 .offline-bar { background: var(--warn-soft); color: var(--warn); font-size: 0.82rem; font-weight: 600; text-align: center; padding: 0.35rem 16px; }
 .topbar-actions { display: flex; align-items: center; gap: 0.1rem; }
 .piggy-btn { position: relative; }
+.nav-item { position: relative; }
+.nav-dot {
+  position: absolute; top: 6px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 999px; background: var(--neg); color: #fff; font-size: 0.68rem; font-weight: 700;
+  display: grid; place-items: center; box-shadow: 0 0 0 2px var(--surface);
+}
 .piggy-dot {
   position: absolute; top: 7px; right: 6px; width: 9px; height: 9px; border-radius: 50%;
   background: var(--neg); box-shadow: 0 0 0 2px var(--bg);

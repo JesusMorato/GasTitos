@@ -3,11 +3,12 @@
 import { computed, ref } from 'vue'
 import { supabase } from '../supabase'
 import type {
-  Budget, BudgetScope, Category, Contribution, Expense, ExpenseShare, RecurringExpense, RecurringRun,
-  SavingsGoal, Settlement, SplitMode, Funding,
+  Budget, BudgetScope, Category, Contribution, DetectedPayment, Expense, ExpenseShare, PaymentKind, PaymentSettings,
+  RecurringExpense, RecurringRun, SavingsGoal, Settlement, SplitMode, Funding,
 } from '../types'
 import { goalBalance, monthOf, todayIso, type Share } from '../lib/money'
 import { isNetworkError, loadSnapshot, online, saveSnapshot } from '../lib/offline'
+import { cardsSeen, newToken, suggestCategory, suggestKind } from '../lib/payments'
 
 // Supabase devuelve como mucho 1000 filas por consulta. Con los años una pareja
 // pasa de ahí (y el balance necesita TODOS los repartidos), así que se pide por
@@ -37,6 +38,8 @@ const settlements = ref<Settlement[]>([])
 const goals = ref<SavingsGoal[]>([])
 const contributions = ref<Contribution[]>([])
 const budgets = ref<Budget[]>([])
+const detected = ref<DetectedPayment[]>([])
+const paymentSettings = ref<PaymentSettings | null>(null)
 const loading = ref(false)
 const loaded = ref(false)
 const error = ref<string | null>(null)
@@ -50,16 +53,19 @@ const snapshotAt = ref<number | null>(null)
 interface Snapshot {
   expenses: Expense[]; shares: ExpenseShare[]; categories: Category[]; settlements: Settlement[]
   goals: SavingsGoal[]; contributions: Contribution[]; budgets: Budget[]; recurring: RecurringExpense[]; runs: RecurringRun[]
+  detected?: DetectedPayment[]; paymentSettings?: PaymentSettings | null
 }
 function snapshot(): Snapshot {
   return {
     expenses: expenses.value, shares: shares.value, categories: categories.value, settlements: settlements.value,
     goals: goals.value, contributions: contributions.value, budgets: budgets.value, recurring: recurring.value, runs: runs.value,
+    detected: detected.value, paymentSettings: paymentSettings.value,
   }
 }
 function applySnapshot(s: Snapshot) {
   expenses.value = s.expenses; shares.value = s.shares; categories.value = s.categories; settlements.value = s.settlements
   goals.value = s.goals; contributions.value = s.contributions; budgets.value = s.budgets; recurring.value = s.recurring; runs.value = s.runs
+  detected.value = s.detected ?? []; paymentSettings.value = s.paymentSettings ?? null
 }
 
 function fail(e: { message: string } | null) {
@@ -80,7 +86,7 @@ async function loadAll() {
   loading.value = true
   error.value = null
   try {
-    const [e, s, c, st, g, gc, b, rc, rr] = await Promise.all([
+    const [e, s, c, st, g, gc, b, rc, rr, dp, ps] = await Promise.all([
       fetchAll(() => supabase.from('expenses').select('*').order('spent_on', { ascending: false }).order('created_at', { ascending: false })),
       fetchAll(() => supabase.from('expense_shares').select('*').order('expense_id').order('user_id')),
       fetchAll(() => supabase.from('categories').select('*').order('sort_order', { ascending: true }).order('name', { ascending: true })),
@@ -90,7 +96,11 @@ async function loadAll() {
       fetchAll(() => supabase.from('budgets').select('*').order('id')),
       fetchAll(() => supabase.from('recurring_expenses').select('*').order('created_at', { ascending: true })),
       fetchAll(() => supabase.from('recurring_runs').select('*').order('id')),
+      fetchAll(() => supabase.from('detected_payments').select('*').order('paid_at', { ascending: false })),
+      fetchAll(() => supabase.from('payment_settings').select('*').order('user_id')),
     ])
+    detected.value = dp.map((r) => num(r, ['amount'])) as unknown as DetectedPayment[]
+    paymentSettings.value = (ps[0] as unknown as PaymentSettings | undefined) ?? null
     budgets.value = b.map((r) => num(r, ['monthly_limit'])) as unknown as Budget[]
     recurring.value = rc.map((r) => ({
       ...r,
@@ -130,6 +140,7 @@ async function loadAll() {
 function reset() {
   expenses.value = []; shares.value = []; categories.value = []; settlements.value = []
   goals.value = []; contributions.value = []; budgets.value = []; recurring.value = []; runs.value = []
+  detected.value = []; paymentSettings.value = null
   loaded.value = false
   error.value = null
   offline.value = false
@@ -288,10 +299,11 @@ export function useData() {
   }
 
   // ---- gastos ------------------------------------------------
-  async function saveExpense(input: ExpenseInput) {
-    const { error: e } = await supabase.rpc('save_expense', { p: input })
+  async function saveExpense(input: ExpenseInput): Promise<string> {
+    const { data: id, error: e } = await supabase.rpc('save_expense', { p: input })
     fail(e)
     await loadAll()
+    return String(id)
   }
 
   async function setExpensePublic(id: string, is_public: boolean) {
@@ -402,6 +414,62 @@ export function useData() {
     await loadAll()
   }
 
+  // ---- pagos detectados (Apple Pay → atajo → aquí) -------------
+  const pendingPayments = computed(() => detected.value.filter((d) => d.status === 'pending'))
+  const expenseById = computed<Record<string, Expense>>(() => {
+    const map: Record<string, Expense> = {}
+    for (const e of expenses.value) map[e.id] = e
+    return map
+  })
+  const paymentCards = computed(() => cardsSeen(detected.value))
+  function kindForCard(card: string): PaymentKind {
+    return suggestKind(card, paymentSettings.value?.card_kinds ?? {})
+  }
+  function categoryForMerchant(merchant: string): string | null {
+    return suggestCategory(merchant, detected.value, expenseById.value)
+  }
+  /** Apunta el gasto y marca el pago como hecho. */
+  async function registerPayment(paymentId: string, input: ExpenseInput) {
+    const { data: id, error: e } = await supabase.rpc('save_expense', { p: input })
+    fail(e)
+    await markPaymentDone(paymentId, String(id))
+  }
+  async function markPaymentDone(paymentId: string, expenseId: string) {
+    const { error: e } = await supabase.from('detected_payments').update({ status: 'done', expense_id: expenseId }).eq('id', paymentId)
+    fail(e)
+    await loadAll()
+  }
+  async function dismissPayment(paymentId: string) {
+    const { error: e } = await supabase.from('detected_payments').update({ status: 'dismissed' }).eq('id', paymentId)
+    fail(e)
+    await loadAll()
+  }
+  /** Crea el código secreto del atajo si aún no existe (o uno nuevo si se pide). */
+  async function ensurePaymentToken(householdId: string, userId: string, renew = false) {
+    if (paymentSettings.value && !renew) return
+    const token = newToken()
+    const { error: e } = paymentSettings.value
+      ? await supabase.from('payment_settings').update({ token }).eq('user_id', userId)
+      : await supabase.from('payment_settings').insert({ user_id: userId, household_id: householdId, token })
+    fail(e)
+    await loadAll()
+  }
+  async function setCardKind(card: string, kind: PaymentKind) {
+    if (!paymentSettings.value) return
+    const card_kinds = { ...paymentSettings.value.card_kinds, [card]: kind }
+    const { error: e } = await supabase.from('payment_settings').update({ card_kinds }).eq('user_id', paymentSettings.value.user_id)
+    fail(e)
+    await loadAll()
+  }
+  /** Manda un pago de prueba por el mismo camino que usará el atajo. */
+  async function sendTestPayment() {
+    const token = paymentSettings.value?.token
+    if (!token) throw new Error('Primero genera el código.')
+    const { error: e } = await supabase.rpc('register_payment', { p_token: token, p_amount: '1,00 €', p_merchant: 'Pago de prueba', p_card: 'Prueba' })
+    fail(e)
+    await loadAll()
+  }
+
   // ---- límites mensuales -------------------------------------
   const potBudget = computed<Budget | null>(() => budgets.value.find((b) => b.scope === 'pot') ?? null)
 
@@ -418,6 +486,8 @@ export function useData() {
 
   return {
     expenses, shares, categories, settlements, goals, contributions, budgets, recurring, runs, loading, loaded, error, offline, snapshotAt,
+    detected, paymentSettings, pendingPayments, paymentCards, kindForCard, categoryForMerchant,
+    registerPayment, markPaymentDone, dismissPayment, ensurePaymentToken, setCardKind, sendTestPayment,
     savedByGoal, sharesByExpense, categoryById, expensesWithShares, potBudget, myBudget, setBudget,
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
     loadAll, ensureLoaded, refreshIfStale, reset,

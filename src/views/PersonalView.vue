@@ -6,10 +6,10 @@ import { useData, type GoalInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
 import { useMonth } from '../composables/useMonth'
 import { useConfirm } from '../composables/useConfirm'
-import { formatEur, lastMonths, monthOf, myShareTotal, round2, shortMonth, sum, totalsByMonth } from '../lib/money'
+import { formatEur, lastMonths, localIso, monthOf, myShareTotal, round2, shortMonth, sum, totalsByMonth } from '../lib/money'
 import { myItems } from '../lib/insights'
 import { breakdownBy } from '../lib/breakdown'
-import type { Contribution, SavingsGoal } from '../types'
+import type { Contribution, DetectedPayment, PaymentKind, SavingsGoal } from '../types'
 import ExpenseList from '../components/ExpenseList.vue'
 import EmptyState from '../components/EmptyState.vue'
 import GoalForm from '../components/GoalForm.vue'
@@ -19,9 +19,10 @@ import CategoryBreakdown from '../components/CategoryBreakdown.vue'
 import MonthlyBars from '../components/MonthlyBars.vue'
 import BudgetCard from '../components/BudgetCard.vue'
 import PendingRecurring from '../components/PendingRecurring.vue'
+import DetectedPayments from '../components/DetectedPayments.vue'
 import UiIcon from '../components/UiIcon.vue'
 
-const { state, me, nameOf } = useSession()
+const { state, me, partner, nameOf } = useSession()
 const data = useData()
 const editor = useEditor()
 const { month } = useMonth()
@@ -107,6 +108,38 @@ async function run(fn: () => Promise<void>) {
   }
 }
 
+// --- pagos detectados ---
+// Personal / Conjunta con categoría recordada: se apunta directo. Si no, se abre el
+// formulario ya relleno (y Repartido siempre, para elegir el reparto).
+const paymentBusy = ref<string | null>(null)
+function pickPayment(p: DetectedPayment, kind: PaymentKind) {
+  const category = data.categoryForMerchant(p.merchant)
+  const base = { amount: p.amount, spent_on: localIso(new Date(p.paid_at)), description: p.merchant || null }
+  if (kind !== 'shared' && category) {
+    paymentBusy.value = p.id
+    run(async () => {
+      try {
+        await data.registerPayment(p.id, { ...base, category_id: category, is_shared: kind === 'pot', funding: kind === 'pot' ? 'pot' : 'personal', split_mode: 'household' })
+        editor.toast('Gasto apuntado')
+      } finally {
+        paymentBusy.value = null
+      }
+    })
+    return
+  }
+  editor.openNew(kind, { prefill: { ...base, description: base.description ?? undefined, category_id: category ?? undefined }, fromPayment: p.id })
+}
+function dismissPayment(p: DetectedPayment) {
+  paymentBusy.value = p.id
+  run(async () => {
+    try {
+      await data.dismissPayment(p.id)
+    } finally {
+      paymentBusy.value = null
+    }
+  })
+}
+
 function setLimit(v: number | null) {
   run(() => data.setBudget('personal', v))
 }
@@ -152,6 +185,17 @@ async function deleteContribution(c: Contribution) {
         <div><div class="label">Conjunta</div><div class="value">{{ formatEur(myPot) }}</div></div>
       </div>
     </div>
+
+    <DetectedPayments
+      :items="data.pendingPayments.value"
+      :has-partner="!!partner"
+      :category-by-id="data.categoryById.value"
+      :kind-for="data.kindForCard"
+      :category-for="data.categoryForMerchant"
+      :busy="paymentBusy"
+      @pick="pickPayment"
+      @dismiss="dismissPayment"
+    />
 
     <PendingRecurring :items="myPending" :category-by-id="data.categoryById.value" :last-amount-of="data.lastAmountOf" @resolve="(id, a) => run(() => data.resolvePending(id, a))" @skip="(id) => run(() => data.skipPending(id))" />
 

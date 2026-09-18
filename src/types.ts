@@ -142,3 +142,28 @@ export interface RecurringRun {
   expense_id: string | null
   created_at: string
 }
+
+/** Pago llegado desde el atajo del iPhone (Apple Pay), pendiente de apuntar. */
+export interface DetectedPayment {
+  id: string
+  household_id: string
+  user_id: string
+  amount: number
+  merchant: string
+  card: string
+  paid_at: string
+  status: 'pending' | 'done' | 'dismissed'
+  expense_id: string | null
+  created_at: string
+}
+
+export type PaymentKind = 'personal' | 'shared' | 'pot'
+
+/** Código secreto del atajo y tipo de gasto propuesto para cada tarjeta. */
+export interface PaymentSettings {
+  user_id: string
+  household_id: string
+  token: string
+  card_kinds: Record<string, PaymentKind>
+  created_at: string
+}

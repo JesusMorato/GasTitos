@@ -168,3 +168,37 @@ mensual y proyección en `src/lib/money.ts` (`monthlyPlan`, `projectedMonth`).
 `move_category(p_from, p_to, p_delete)`: pasa todos los gastos y gastos fijos del hogar de una
 categoría a otra (también los personales privados de la pareja, por eso es security definer) y,
 si `p_delete`, borra la de origen. Devuelve cuántas filas ha movido.
+
+## Añadido en 0009 (pagos detectados desde el iPhone)
+
+### payment_settings — código del atajo y tipo por tarjeta
+
+| columna | tipo | notas |
+|---|---|---|
+| user_id | uuid pk | uno por usuario |
+| household_id | uuid | |
+| token | text único | código secreto (24 caracteres) que usa el atajo del iPhone |
+| card_kinds | jsonb | `{ "Revolut": "pot", "Bankinter": "personal" }`: tipo propuesto por tarjeta |
+
+RLS: cada usuario ve, crea y cambia solo su fila.
+
+### detected_payments — pagos llegados del atajo
+
+| columna | tipo | notas |
+|---|---|---|
+| id, household_id, user_id | | |
+| amount | numeric(12,2) | siempre positivo |
+| merchant, card | text | comercio y nombre de la tarjeta, tal como los manda el iPhone |
+| paid_at | timestamptz | momento del pago |
+| status | text | `pending` (sin apuntar) · `done` (apuntado) · `dismissed` (descartado) |
+| expense_id | uuid | gasto creado al apuntarlo (null si se descartó) |
+
+RLS: cada usuario ve, cambia y borra solo los suyos. **Nadie puede insertar directamente**:
+solo entran por `register_payment`.
+
+### register_payment(p_token, p_amount, p_merchant, p_card, p_at) — pública
+
+La llama el atajo con la clave anon. Busca el usuario por `token`; si no existe, error.
+Convierte el importe en texto (`"12,34 €"`, `"1.234,56"`, `"12.34"`) con `parse_amount`
+y lo guarda en positivo. Si en dos minutos llega el mismo importe y comercio del mismo
+usuario, devuelve `repetido` y no inserta (el atajo puede dispararse dos veces).

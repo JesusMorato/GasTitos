@@ -11,7 +11,11 @@ export function formatDate(iso: string): string {
 }
 
 export function todayIso(): string {
-  const d = new Date()
+  return localIso(new Date())
+}
+
+/** Fecha (AAAA-MM-DD) de un instante, en la zona horaria del dispositivo. */
+export function localIso(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
