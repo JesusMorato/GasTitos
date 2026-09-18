@@ -57,6 +57,19 @@ Consejo: haz esta parte en el propio iPhone, así puedes copiar y pegar en Atajo
 
 6. Pulsa **Listo** dos veces. La automatización queda activa.
 
+### Si no aparece "Transacción"
+
+- Tienes que estar en la pestaña **Automatización** (la del centro, abajo) y pulsar **+**
+  o "Nueva automatización". Si buscas "Apple Pay" en la pestaña Atajos solo salen
+  acciones de enviar/recibir dinero: eso no es.
+- Hace falta **iOS 17 o más nuevo** (Ajustes → General → Información → Versión iOS).
+  Con iOS 16 no existe.
+- Tiene que haber **al menos una tarjeta en la app Cartera** de ese iPhone: el disparador
+  pregunta con qué tarjetas saltar, y sin tarjetas no se ofrece.
+- Solo está en iPhone, no en iPad.
+- Si aun así no sale, reinicia el iPhone y vuelve a mirar la lista entera (desliza hasta
+  abajo: está junto a "CarPlay", "Wi‑Fi", "Bluetooth"…).
+
 ## 3. Probar
 
 - **Sin gastar dinero:** en GasTitos → Ajustes → **"Enviar un pago de prueba"**. Debe salir
