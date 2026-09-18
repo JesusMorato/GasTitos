@@ -7,6 +7,7 @@ import { useConfirm } from '../composables/useConfirm'
 import type { Category, RecurringExpense } from '../types'
 import { todayIso } from '../lib/money'
 import { downloadText, toCsv } from '../lib/csv'
+import { indexAtY, moveItem, sortOrderUpdates } from '../lib/reorder'
 import CategoryIcon from '../components/CategoryIcon.vue'
 import Sheet from '../components/Sheet.vue'
 import EmojiPicker from '../components/EmojiPicker.vue'
@@ -138,16 +139,47 @@ async function moveAll(del: boolean) {
   }, '')
 }
 
-function moveCat(c: Category, dir: -1 | 1) {
-  const list = data.categories.value
-  const i = list.findIndex((x) => x.id === c.id)
-  const j = i + dir
-  if (j < 0 || j >= list.length) return
-  const other = list[j]
-  run(async () => {
-    await data.updateCategory(c.id, { sort_order: other.sort_order })
-    await data.updateCategory(other.id, { sort_order: c.sort_order })
-  }, 'Orden actualizado')
+// Reordenar categorías arrastrando por el asa (ratón o dedo).
+// Mientras se arrastra se trabaja sobre una copia local; al soltar se guarda.
+const dragFrom = ref<number | null>(null)
+const dragAt = ref<number | null>(null)
+const catOrder = ref<Category[]>([])
+watch(() => data.categories.value, (list) => { if (dragFrom.value === null) catOrder.value = [...list] }, { immediate: true, deep: true })
+const listEl = ref<HTMLUListElement | null>(null)
+
+function startDrag(e: PointerEvent, i: number) {
+  if (e.button !== 0 && e.pointerType === 'mouse') return
+  e.preventDefault()
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  dragFrom.value = i
+  dragAt.value = i
+}
+function onDrag(e: PointerEvent) {
+  if (dragFrom.value === null || !listEl.value) return
+  const rows = Array.from(listEl.value.children).map((li) => {
+    const r = li.getBoundingClientRect()
+    return { top: r.top, bottom: r.bottom }
+  })
+  const to = indexAtY(rows, e.clientY)
+  if (to !== dragAt.value) {
+    catOrder.value = moveItem(catOrder.value, dragAt.value ?? dragFrom.value, to)
+    dragAt.value = to
+  }
+}
+function endDrag() {
+  if (dragFrom.value === null) return
+  const changed = dragAt.value !== dragFrom.value
+  dragFrom.value = null
+  dragAt.value = null
+  if (!changed) return
+  const updates = sortOrderUpdates(catOrder.value)
+  run(() => data.reorderCategories(updates), 'Orden actualizado')
+}
+function cancelDrag() {
+  if (dragFrom.value === null) return
+  dragFrom.value = null
+  dragAt.value = null
+  catOrder.value = [...data.categories.value]
 }
 
 async function logout() {
@@ -287,14 +319,21 @@ function exportGoals() {
         <h2>Categorías</h2>
         <button type="button" class="small secondary" @click="openCat()">+ Nueva</button>
       </div>
-      <p class="tiny" style="margin-bottom: 0.4rem">Son comunes al hogar. Elige para cada una un icono GasTitos o un emoji, y su color.</p>
-      <ul class="list">
-        <li v-for="(c, i) in data.categories.value" :key="c.id">
+      <p class="tiny" style="margin-bottom: 0.4rem">Son comunes al hogar. Elige para cada una un icono GasTitos o un emoji, y su color. Arrastra por los puntitos para cambiar el orden.</p>
+      <ul ref="listEl" class="list cat-list" :class="{ dragging: dragFrom !== null }">
+        <li v-for="(c, i) in catOrder" :key="c.id" :class="{ lifted: dragAt === i }">
+          <span
+            class="drag-handle"
+            title="Arrastrar para ordenar"
+            aria-label="Arrastrar para ordenar"
+            @pointerdown="startDrag($event, i)"
+            @pointermove="onDrag"
+            @pointerup="endDrag"
+            @pointercancel="cancelDrag"
+          ><UiIcon name="grip" :size="18" /></span>
           <CategoryIcon :icon="c.icon" :emoji="c.emoji" :color="c.color" />
           <div class="grow ellipsis"><strong>{{ c.name }}</strong></div>
           <div class="actions">
-            <button type="button" class="icon" title="Subir" aria-label="Subir" :disabled="i === 0" @click="moveCat(c, -1)"><UiIcon name="chevronUp" :size="18" /></button>
-            <button type="button" class="icon" title="Bajar" aria-label="Bajar" :disabled="i === data.categories.value.length - 1" @click="moveCat(c, 1)"><UiIcon name="chevronDown" :size="18" /></button>
             <button type="button" class="icon" title="Editar" aria-label="Editar" @click="openCat(c)"><UiIcon name="pencil" :size="18" /></button>
             <button type="button" class="icon" title="Borrar" aria-label="Borrar" @click="deleteCat(c)"><UiIcon name="trash" :size="18" /></button>
           </div>
@@ -359,3 +398,31 @@ function exportGoals() {
     </Sheet>
   </div>
 </template>
+
+<style scoped>
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 40px;
+  margin-left: -0.35rem;
+  color: var(--ink-3);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  border-radius: var(--r-md);
+}
+.cat-list.dragging { cursor: grabbing; }
+.cat-list.dragging .drag-handle { cursor: grabbing; }
+.cat-list li { transition: background 0.15s; }
+.cat-list li.lifted {
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow);
+  position: relative;
+  z-index: 1;
+}
+.cat-list li.lifted + li { border-top-color: transparent; }
+</style>

@@ -2,14 +2,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
-import { useData, type GoalInput, type RecurringInput } from '../composables/useData'
+import { useData, type GoalInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
 import { useMonth } from '../composables/useMonth'
 import { useConfirm } from '../composables/useConfirm'
 import { formatEur, lastMonths, monthOf, myShareTotal, round2, shortMonth, sum, totalsByMonth } from '../lib/money'
 import { myItems } from '../lib/insights'
 import { breakdownBy } from '../lib/breakdown'
-import type { Contribution, RecurringExpense, SavingsGoal } from '../types'
+import type { Contribution, SavingsGoal } from '../types'
 import ExpenseList from '../components/ExpenseList.vue'
 import EmptyState from '../components/EmptyState.vue'
 import GoalForm from '../components/GoalForm.vue'
@@ -19,8 +19,6 @@ import CategoryBreakdown from '../components/CategoryBreakdown.vue'
 import MonthlyBars from '../components/MonthlyBars.vue'
 import BudgetCard from '../components/BudgetCard.vue'
 import PendingRecurring from '../components/PendingRecurring.vue'
-import RecurringForm from '../components/RecurringForm.vue'
-import RecurringList from '../components/RecurringList.vue'
 import UiIcon from '../components/UiIcon.vue'
 
 const { state, me, nameOf } = useSession()
@@ -92,26 +90,6 @@ const labels6 = computed(() => months6.value.map(shortMonth))
 
 const myLimit = computed(() => data.myBudget(userId.value)?.monthly_limit ?? null)
 const myPending = computed(() => data.pendingRuns.value.filter((p) => p.recurring.kind === 'personal'))
-
-// --- mis gastos fijos (solo los personales; los comunes se gestionan en Ajustes) ---
-const myRecurring = computed(() => data.recurring.value.filter((r) => r.kind === 'personal' && r.user_id === userId.value))
-const recOpen = ref(false)
-const recEditing = ref<RecurringExpense | undefined>()
-function openRec(r?: RecurringExpense) {
-  recEditing.value = r
-  recOpen.value = true
-}
-function saveRec(input: RecurringInput) {
-  const editing = recEditing.value
-  recOpen.value = false
-  run(() => (editing ? data.updateRecurring(editing.id, input) : data.addRecurring(state.household!.id, input)))
-}
-function toggleRec(r: RecurringExpense) {
-  run(() => data.updateRecurring(r.id, { active: !r.active }))
-}
-async function deleteRec(r: RecurringExpense) {
-  if (await confirm({ title: 'Borrar gasto fijo', message: `Se borra "${r.name}". Los gastos que ya se apuntaron se quedan.` })) run(() => data.deleteRecurring(r.id))
-}
 
 const myGoals = computed(() => data.goals.value.filter((g) => !g.is_shared && g.user_id === userId.value))
 const totalSaved = computed(() => sum(myGoals.value.map((g) => data.savedByGoal.value[g.id] ?? 0)))
@@ -220,23 +198,6 @@ async function deleteContribution(c: Contribution) {
       />
     </div>
 
-    <div class="card">
-      <div class="section-title" style="margin-top: 0">
-        <h2>Mis gastos fijos</h2>
-        <button type="button" class="small secondary" @click="openRec()">+ Fijo</button>
-      </div>
-      <p class="tiny" style="margin-bottom: 0.4rem">Gimnasio, móvil, suscripciones… Se apuntan solos cada mes en tus gastos (día 1). Solo los ves tú.</p>
-      <RecurringList
-        :items="myRecurring"
-        :category-by-id="data.categoryById.value"
-        :name-of="nameOf"
-        empty-text="Sin gastos fijos personales. Añade lo que pagas todos los meses."
-        @toggle="toggleRec"
-        @edit="openRec"
-        @delete="deleteRec"
-      />
-    </div>
-
     <div class="section-title">
       <h2>Mis huchas <span class="tag" style="margin-left: 0.3rem">{{ formatEur(totalSaved) }}</span></h2>
       <button type="button" class="small secondary" @click="editingGoal = undefined; showGoalForm = true">+ Hucha</button>
@@ -257,17 +218,6 @@ async function deleteContribution(c: Contribution) {
       @toggle-public="toggleGoalPublic"
       @move="moveGoal"
       @delete-contribution="deleteContribution"
-    />
-
-    <RecurringForm
-      v-if="recOpen && state.user"
-      :members="state.members"
-      :categories="data.categories.value"
-      :current-user-id="state.user.id"
-      :initial="recEditing"
-      fixed-kind="personal"
-      @save="saveRec"
-      @close="recOpen = false"
     />
 
     <GoalForm

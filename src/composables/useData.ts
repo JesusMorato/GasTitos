@@ -327,6 +327,14 @@ export function useData() {
     await loadAll()
   }
 
+  /** Guarda de golpe el nuevo orden de varias categorías (al arrastrar). */
+  async function reorderCategories(updates: { id: string; sort_order: number }[]) {
+    if (updates.length === 0) return
+    const results = await Promise.all(updates.map((u) => supabase.from('categories').update({ sort_order: u.sort_order }).eq('id', u.id)))
+    for (const r of results) fail(r.error)
+    await loadAll()
+  }
+
   /** Pasa todos los gastos (y fijos) de una categoría a otra; con `del`, borra la de origen. */
   async function moveCategory(from: string, to: string, del: boolean): Promise<number> {
     const { data: n, error: e } = await supabase.rpc('move_category', { p_from: from, p_to: to, p_delete: del })
@@ -414,7 +422,7 @@ export function useData() {
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
     loadAll, ensureLoaded, refreshIfStale, reset,
     saveExpense, setExpensePublic, deleteExpense,
-    addCategory, updateCategory, deleteCategory, moveCategory,
+    addCategory, updateCategory, reorderCategories, deleteCategory, moveCategory,
     addSettlement, deleteSettlement,
     addGoal, updateGoal, deleteGoal,
     addContribution, deleteContribution,

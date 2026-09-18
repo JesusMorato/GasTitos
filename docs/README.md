@@ -15,6 +15,17 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-18 · v0.6.1 — categorías por arrastre y gastos fijos solo en Ajustes.**
+
+- **Ordenar categorías arrastrando**: en Ajustes → Categorías cada fila tiene un asa
+  (seis puntitos) a la izquierda; se arrastra con el ratón o el dedo y al soltar se
+  guarda el orden de golpe (`reorderCategories` en `useData.ts`). Desaparecen las
+  flechas subir/bajar. Lógica pura en `lib/reorder.ts` (testeada). El asa está en la
+  lista de zonas que ignora el deslizar entre vistas (`lib/swipe.ts`).
+- **La tarjeta "Mis gastos fijos" ya no está en la vista Yo**: los fijos personales se
+  crean y editan en Ajustes → Gastos fijos (allí aparecen todos, con su tipo). En Yo
+  sigue el aviso de pendientes por rellenar y la etiqueta "N fijos" en "Mis gastos".
+
 **2026-09-17 · desglose desplegable en el donut.**
 En el donut de "Mi mes" (Yo) y de la cuenta conjunta (Pareja), al pulsar una categoría
 de la leyenda o su trozo del donut se despliega con animación la lista de gastos que

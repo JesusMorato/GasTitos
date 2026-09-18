@@ -1,6 +1,6 @@
 // Deslizar horizontalmente para cambiar de vista. Ignora los gestos que empiezan
 // sobre una gráfica, un control deslizante, una hoja abierta o las pestañas.
-const IGNORE = '.chart-box, input[type="range"], .sheet-backdrop, .segmented, .menu, textarea'
+const IGNORE = '.chart-box, input[type="range"], .sheet-backdrop, .segmented, .menu, textarea, .drag-handle'
 const MIN_X = 64
 const MAX_Y = 48
 
