@@ -477,12 +477,16 @@ export function useData() {
     fail(e)
     await loadAll()
   }
-  /** Manda un pago de prueba por el mismo camino que usará el atajo. */
+  /** Manda un pago de prueba por el mismo camino que usará el atajo. El importe es
+   *  aleatorio para que dos pruebas seguidas no se descarten como repetidas. */
   async function sendTestPayment() {
     const token = paymentSettings.value?.token
     if (!token) throw new Error('Primero genera el código.')
-    const { error: e } = await supabase.rpc('register_payment', { p_token: token, p_amount: '1,00 €', p_merchant: 'Pago de prueba', p_card: 'Prueba' })
+    const cents = 100 + Math.floor(Math.random() * 900)
+    const amount = `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, '0')} €`
+    const { data: result, error: e } = await supabase.rpc('register_payment', { p_token: token, p_amount: amount, p_merchant: 'Pago de prueba', p_card: 'Prueba' })
     fail(e)
+    if (result === 'repetido') throw new Error('Se ha ignorado por repetido: mismo importe y comercio que otro pago de hace menos de dos minutos.')
     await loadAll()
   }
 

@@ -74,8 +74,10 @@ Consejo: haz esta parte en el propio iPhone, así puedes copiar y pegar en Atajo
 ## 3. Probar
 
 - **Sin gastar dinero:** en GasTitos → Ajustes → **"Enviar un pago de prueba"**. Debe salir
-  la bolita en "Yo" y un pago de 1,00 € llamado "Pago de prueba". Descártalo con la ✕.
-  Esto comprueba la parte de GasTitos, no el atajo.
+  la bolita en "Yo" y un pago de unos pocos euros llamado "Pago de prueba". Descártalo con
+  la ✕. Esto comprueba la parte de GasTitos, no el atajo.
+- Ojo: si en menos de dos minutos llegan dos pagos con el mismo importe y el mismo comercio,
+  el segundo se ignora como repetido (el atajo a veces se dispara dos veces).
 - **De verdad:** paga algo pequeño con Apple Pay con cada tarjeta. Al abrir GasTitos
   (o al cabo de un minuto si ya estaba abierta) tiene que aparecer el pago.
 
