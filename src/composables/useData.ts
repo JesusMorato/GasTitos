@@ -235,12 +235,28 @@ export function useData() {
    */
   async function refreshIfStale(maxAgeMs = 60_000) {
     if (!loaded.value || loading.value || !online.value) return
-    if (!offline.value && Date.now() - loadedAt < maxAgeMs) return
+    if (!offline.value && Date.now() - loadedAt < maxAgeMs) {
+      // Datos recientes: solo se miran los pagos detectados, que pueden haber
+      // llegado hace segundos (se acaba de pagar con el móvil).
+      await refreshPayments()
+      return
+    }
     try {
       await syncRecurring()
       await loadAll()
     } catch {
       // Se reintentará en la próxima vuelta a la app.
+    }
+  }
+
+  /** Consulta solo los pagos detectados (barata; se hace cada vez que se vuelve a la app). */
+  async function refreshPayments() {
+    if (!loaded.value || offline.value || !online.value) return
+    try {
+      const rows = await fetchAll(() => supabase.from('detected_payments').select('*').order('paid_at', { ascending: false }))
+      detected.value = rows.map((r) => num(r, ['amount'])) as unknown as DetectedPayment[]
+    } catch {
+      // Sin red o error pasajero: se queda lo que había.
     }
   }
 
@@ -490,7 +506,7 @@ export function useData() {
     registerPayment, markPaymentDone, dismissPayment, ensurePaymentToken, setCardKind, sendTestPayment,
     savedByGoal, sharesByExpense, categoryById, expensesWithShares, potBudget, myBudget, setBudget,
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
-    loadAll, ensureLoaded, refreshIfStale, reset,
+    loadAll, ensureLoaded, refreshIfStale, refreshPayments, reset,
     saveExpense, setExpensePublic, deleteExpense,
     addCategory, updateCategory, reorderCategories, deleteCategory, moveCategory,
     addSettlement, deleteSettlement,
