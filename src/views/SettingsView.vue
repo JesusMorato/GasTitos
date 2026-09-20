@@ -6,8 +6,8 @@ import { useData, type RecurringInput } from '../composables/useData'
 import { useConfirm } from '../composables/useConfirm'
 import type { Category, PaymentKind, RecurringExpense } from '../types'
 import { supabaseAnonKey, supabaseUrl } from '../supabase'
-import { todayIso } from '../lib/money'
-import { downloadText, toCsv } from '../lib/csv'
+import { formatDate, formatEur, todayIso } from '../lib/money'
+import { shareOrDownload, toCsv } from '../lib/csv'
 import { indexAtY, moveItem, sortOrderUpdates } from '../lib/reorder'
 import CategoryIcon from '../components/CategoryIcon.vue'
 import Sheet from '../components/Sheet.vue'
@@ -211,6 +211,9 @@ async function renewToken() {
 function testPayment() {
   run(() => data.sendTestPayment(), 'Pago de prueba enviado: mira la bolita en "Yo"')
 }
+function restorePayment(id: string) {
+  run(() => data.restorePayment(id), 'Pago recuperado: lo tienes otra vez en "Yo"')
+}
 function setCardKind(card: string, ev: Event) {
   run(() => data.setCardKind(card, (ev.target as HTMLSelectElement).value as PaymentKind), 'Tarjeta guardada')
 }
@@ -242,7 +245,7 @@ function exportExpenses() {
   for (const s of [...data.settlements.value].sort((a, b) => (a.settled_on < b.settled_on ? -1 : 1))) {
     rows.push([s.settled_on, nameOf(s.from_user), nameOf(s.to_user), s.amount, s.note ?? ''])
   }
-  downloadText(`gastitos-gastos-${todayIso()}.csv`, toCsv(rows))
+  void shareOrDownload(`gastitos-gastos-${todayIso()}.csv`, toCsv(rows))
 }
 function exportGoals() {
   const rows: unknown[][] = [['Hucha', 'Tipo', 'Objetivo', 'Fecha límite', 'Ahorrado', 'Fecha', 'Quién', 'Movimiento', 'Importe', 'Nota']]
@@ -254,7 +257,7 @@ function exportGoals() {
       rows.push([g.name, g.is_shared ? 'pareja' : 'personal', g.target_amount, g.deadline ?? '', saved, c.contributed_on, nameOf(c.user_id), c.direction === 'out' ? 'sacar' : 'meter', c.amount, c.note ?? ''])
     }
   }
-  downloadText(`gastitos-huchas-${todayIso()}.csv`, toCsv(rows))
+  void shareOrDownload(`gastitos-huchas-${todayIso()}.csv`, toCsv(rows))
 }
 </script>
 
@@ -419,12 +422,23 @@ function exportGoals() {
           </div>
           <p class="help">Se marca ese tipo como primer botón, pero siempre puedes elegir otro.</p>
         </div>
+        <div v-if="data.dismissedPayments.value.length" class="field">
+          <label>Descartados hace poco</label>
+          <ul class="list">
+            <li v-for="p in data.dismissedPayments.value" :key="p.id">
+              <div class="grow ellipsis">{{ p.merchant || 'Pago' }} <span class="tiny">· {{ formatDate(p.paid_at.slice(0, 10)) }}</span></div>
+              <span class="amount">{{ formatEur(p.amount) }}</span>
+              <button type="button" class="ghost small" @click="restorePayment(p.id)">Recuperar</button>
+            </li>
+          </ul>
+          <p class="help">Los descartados se borran solos a los 90 días.</p>
+        </div>
       </template>
     </div>
 
     <div class="card">
       <h2>Tus datos</h2>
-      <p class="tiny" style="margin: 0.3rem 0 0.6rem">Descarga una copia en CSV (se abre en Excel). Incluye lo que tú puedes ver: lo tuyo, lo repartido y la cuenta conjunta.</p>
+      <p class="tiny" style="margin: 0.3rem 0 0.6rem">Copia en CSV (se abre en Excel). En el móvil se abre el menú de compartir para guardarlo o enviarlo; en el ordenador se descarga. Incluye lo que tú puedes ver: lo tuyo, lo repartido y la cuenta conjunta.</p>
       <div class="row">
         <button type="button" class="secondary small" @click="exportExpenses"><UiIcon name="arrowIn" :size="16" /> Gastos y pagos</button>
         <button type="button" class="secondary small" @click="exportGoals"><UiIcon name="arrowIn" :size="16" /> Huchas y movimientos</button>

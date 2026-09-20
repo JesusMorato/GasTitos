@@ -202,3 +202,10 @@ La llama el atajo con la clave anon. Busca el usuario por `token`; si no existe,
 Convierte el importe en texto (`"12,34 €"`, `"1.234,56"`, `"12.34"`) con `parse_amount`
 y lo guarda en positivo. Si en dos minutos llega el mismo importe y comercio del mismo
 usuario, devuelve `repetido` y no inserta (el atajo puede dispararse dos veces).
+
+## Añadido en 0010
+
+- `partner_pending_payments()`: número de pagos detectados pendientes de la otra persona
+  del hogar (security definer: solo devuelve el número, nunca las filas).
+- `register_payment` borra además, del mismo usuario, los descartados de más de 90 días y
+  los apuntados de más de 365 (estos últimos son la memoria por comercio, por eso duran más).

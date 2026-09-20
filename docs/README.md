@@ -15,6 +15,22 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-20 · v0.7.1 — mejoras pequeñas: deshacer, editar movimientos, compartir CSV, avisos de hucha y pagos de la pareja.**
+
+- **Deshacer**: al borrar un gasto, un movimiento de hucha o descartar un pago detectado,
+  el aviso de abajo lleva un botón "Deshacer" (7 s). `useEditor.toast(msg, { label, run })`;
+  el gasto se vuelve a crear con `reinsertExpense` (id nuevo, mismas partes).
+- **Editar un movimiento de hucha** (lápiz junto a la papelera, solo los propios): el
+  formulario de meter/sacar se rellena y el botón pasa a "Guardar". `updateContribution`.
+- **Exportar CSV**: en el móvil abre el menú de compartir (`shareOrDownload` en `lib/csv.ts`,
+  Web Share API con archivo); si no existe, descarga como antes.
+- **Cerdito**: "hucha conseguida" ahora es importante (sale el puntito) y hay aviso nuevo
+  de **hucha vencida** (fecha pasada sin llegar). Regla y test en `lib/insights.ts`.
+- **Pagos detectados**: en Ajustes, lista "Descartados hace poco" con botón Recuperar;
+  en Pareja, "X tiene N pagos detectados sin apuntar" (solo el número, función
+  `partner_pending_payments`); limpieza automática al registrar un pago (descartados de
+  más de 90 días y apuntados de más de un año). Migración `0010_pagos_pareja_y_limpieza.sql`.
+
 **2026-09-18 · v0.7 — pagos detectados desde el iPhone (Apple Pay → Atajos → GasTitos).**
 
 - **Cómo funciona**: la automatización "Transacción" de Atajos salta al pagar con Apple Pay
@@ -264,13 +280,7 @@ hecho y publicado. Lo que sigue son evolutivos abiertos, ninguno comprometido.
 
 ### Mejoras pequeñas, a demanda
 
-- **Editar un movimiento de hucha** (ahora solo se puede borrar y volver a meter).
-- **Deshacer** tras borrar un gasto o un movimiento (un botón en el aviso de abajo).
-- **Exportar CSV con el menú de compartir del iPhone** (hoy es una descarga, que en
-  Safari queda escondida en "Descargas").
-- **Aviso del cerdito cuando una hucha se cumple**: hoy solo dice cuánto falta al mes.
-- **Pagos detectados**: historial de descartados para recuperar uno; borrar automáticamente
-  los de hace meses; que en Pareja se vea "tu pareja tiene N pagos por apuntar".
+Las cinco de la revisión del 2026-09-20 están hechas (v0.7.1). No queda ninguna apuntada.
 
 ### Descartado
 

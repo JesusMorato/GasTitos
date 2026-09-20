@@ -101,7 +101,10 @@ Repartido / Conjunta. El que sale resaltado es el que se propone:
   categoría recordada. Repartido también se apunta directo si la última vez fue con el
   reparto normal del hogar; si fue otro reparto, se abre el formulario.
 - **Comercio nuevo**: se abre el formulario ya relleno para elegir categoría (y reparto).
-- **✕**: lo descarta (no se apunta ni vuelve a salir).
+- **✕**: lo descarta. Sale un aviso con **Deshacer** durante unos segundos; y en Ajustes →
+  Pagos automáticos hay una lista "Descartados hace poco" con botón **Recuperar**.
+- En la pestaña **Pareja** se ve "X tiene N pagos detectados sin apuntar" (solo el número).
+- Los descartados se borran solos a los 90 días y los apuntados al año.
 
 Importante: lo "recordado" sale del último pago que apuntaste de ese comercio, así que si
 un día lo apuntas de otra forma, a partir de entonces propone esa.

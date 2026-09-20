@@ -23,6 +23,7 @@ const emit = defineEmits<{
   (e: 'toggle-public', g: SavingsGoal): void
   (e: 'move', g: SavingsGoal, amount: number, date: string, note: string | null, direction: 'in' | 'out'): void
   (e: 'delete-contribution', c: Contribution): void
+  (e: 'update-contribution', c: Contribution, amount: number, date: string, note: string | null, direction: 'in' | 'out'): void
 }>()
 
 const open = ref(false)
@@ -79,9 +80,31 @@ const byMember = computed(() => {
   }))
 })
 
+// Editar: el formulario de abajo se rellena con el movimiento y el botón pasa a "Guardar".
+const editing = ref<Contribution | null>(null)
+function startEdit(c: Contribution) {
+  editing.value = c
+  amount.value = c.amount
+  date.value = c.contributed_on
+  note.value = c.note ?? ''
+  direction.value = c.direction
+}
+function cancelEdit() {
+  editing.value = null
+  amount.value = 0
+  date.value = todayIso()
+  note.value = ''
+  direction.value = 'in'
+}
+
 function move() {
   const v = Number(amount.value)
   if (!(v > 0)) return
+  if (editing.value) {
+    emit('update-contribution', editing.value, round2(v), date.value, note.value.trim() || null, direction.value)
+    cancelEdit()
+    return
+  }
   emit('move', props.goal, round2(v), date.value, note.value.trim() || null, direction.value)
   amount.value = 0
   note.value = ''
@@ -144,7 +167,7 @@ function move() {
 
     <div v-if="open">
       <ul class="list">
-        <li v-for="c in contributions" :key="c.id">
+        <li v-for="c in contributions" :key="c.id" :class="{ editing: editing?.id === c.id }">
           <span class="emoji-badge" :style="{ '--badge': c.direction === 'out' ? 'var(--neg)' : goal.color }" style="width: 32px; height: 32px; border-radius: 10px">
             <UiIcon :name="c.direction === 'out' ? 'arrowOut' : 'arrowIn'" :size="16" />
           </span>
@@ -153,19 +176,28 @@ function move() {
             <div class="tiny">{{ formatDate(c.contributed_on) }}</div>
           </div>
           <span class="amount" :class="{ neg: c.direction === 'out' }">{{ c.direction === 'out' ? '−' : '+' }}{{ formatEur(c.amount) }}</span>
-          <button v-if="editable && c.user_id === currentUserId" type="button" class="icon" title="Borrar" aria-label="Borrar movimiento" @click="emit('delete-contribution', c)"><UiIcon name="trash" :size="18" /></button>
+          <template v-if="editable && c.user_id === currentUserId">
+            <button type="button" class="icon" title="Editar" aria-label="Editar movimiento" @click="startEdit(c)"><UiIcon name="pencil" :size="18" /></button>
+            <button type="button" class="icon" title="Borrar" aria-label="Borrar movimiento" @click="emit('delete-contribution', c)"><UiIcon name="trash" :size="18" /></button>
+          </template>
         </li>
       </ul>
 
       <form v-if="editable" class="stack" style="margin-top: 0.6rem; gap: 0.5rem" @submit.prevent="move">
+        <p v-if="editing" class="tiny" style="margin: 0">Editando el movimiento del {{ formatDate(editing.contributed_on) }}.</p>
         <SegmentedControl v-model="direction" :options="dirOptions" small />
         <div class="row">
           <input v-model.number="amount" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="€" style="max-width: 110px" required aria-label="Importe" />
           <input v-model="date" type="date" style="max-width: 160px" required aria-label="Fecha" />
           <input v-model="note" placeholder="Nota" maxlength="80" class="grow" style="min-width: 120px" aria-label="Nota" />
-          <button type="submit" class="small">{{ direction === 'out' ? 'Sacar' : 'Meter' }}</button>
+          <button type="submit" class="small">{{ editing ? 'Guardar' : direction === 'out' ? 'Sacar' : 'Meter' }}</button>
+          <button v-if="editing" type="button" class="ghost small" @click="cancelEdit">Cancelar</button>
         </div>
       </form>
     </div>
   </div>
 </template>
+
+<style scoped>
+.list li.editing { background: var(--surface-2); border-radius: var(--r-md); padding-left: 0.4rem; padding-right: 0.4rem; }
+</style>

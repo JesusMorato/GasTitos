@@ -135,22 +135,23 @@ function pickPayment(p: DetectedPayment, kind: PaymentKind) {
   }
   editor.openNew(kind, { prefill: { ...base, description: base.description ?? undefined, category_id: category ?? undefined }, fromPayment: p.id })
 }
-function dismissPayment(p: DetectedPayment) {
+async function dismissPayment(p: DetectedPayment) {
   paymentBusy.value = p.id
-  run(async () => {
-    try {
-      await data.dismissPayment(p.id)
-    } finally {
-      paymentBusy.value = null
-    }
-  })
+  try {
+    await run(() => data.dismissPayment(p.id))
+  } finally {
+    paymentBusy.value = null
+  }
+  editor.toast('Pago descartado', { label: 'Deshacer', run: () => run(() => data.restorePayment(p.id)) })
 }
 
 function setLimit(v: number | null) {
   run(() => data.setBudget('personal', v))
 }
 async function deleteExpense(x: ExpenseRow) {
-  if (await confirm({ title: 'Borrar gasto', message: `¿Borrar el gasto de ${formatEur(x.amount)}?` })) run(() => data.deleteExpense(x.id))
+  if (!(await confirm({ title: 'Borrar gasto', message: `¿Borrar el gasto de ${formatEur(x.amount)}?` }))) return
+  await run(() => data.deleteExpense(x.id))
+  editor.toast('Gasto borrado', { label: 'Deshacer', run: () => run(() => data.reinsertExpense(x)) })
 }
 function togglePublic(x: ExpenseRow) {
   run(() => data.setExpensePublic(x.id, !x.is_public))
@@ -176,7 +177,12 @@ function moveGoal(g: SavingsGoal, amount: number, date: string, note: string | n
   run(() => data.addContribution(g.id, userId.value, amount, date, note, direction))
 }
 async function deleteContribution(c: Contribution) {
-  if (await confirm({ title: 'Borrar movimiento', message: `¿Borrar el movimiento de ${formatEur(c.amount)}?` })) run(() => data.deleteContribution(c.id))
+  if (!(await confirm({ title: 'Borrar movimiento', message: `¿Borrar el movimiento de ${formatEur(c.amount)}?` }))) return
+  await run(() => data.deleteContribution(c.id))
+  editor.toast('Movimiento borrado', { label: 'Deshacer', run: () => run(() => data.addContribution(c.goal_id, c.user_id, c.amount, c.contributed_on, c.note, c.direction)) })
+}
+function updateContribution(c: Contribution, amount: number, date: string, note: string | null, direction: 'in' | 'out') {
+  run(() => data.updateContribution(c.id, { amount, contributed_on: date, note, direction }))
 }
 </script>
 
@@ -268,6 +274,7 @@ async function deleteContribution(c: Contribution) {
       @toggle-public="toggleGoalPublic"
       @move="moveGoal"
       @delete-contribution="deleteContribution"
+      @update-contribution="updateContribution"
     />
 
     <GoalForm

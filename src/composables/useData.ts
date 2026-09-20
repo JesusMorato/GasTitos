@@ -40,6 +40,8 @@ const contributions = ref<Contribution[]>([])
 const budgets = ref<Budget[]>([])
 const detected = ref<DetectedPayment[]>([])
 const paymentSettings = ref<PaymentSettings | null>(null)
+/** Pagos detectados que tu pareja aún no ha apuntado (solo el número). */
+const partnerPending = ref(0)
 const loading = ref(false)
 const loaded = ref(false)
 const error = ref<string | null>(null)
@@ -101,6 +103,9 @@ async function loadAll() {
     ])
     detected.value = dp.map((r) => num(r, ['amount'])) as unknown as DetectedPayment[]
     paymentSettings.value = (ps[0] as unknown as PaymentSettings | undefined) ?? null
+    // Solo un número; si la función aún no existe (migración sin aplicar), 0 y sin ruido.
+    const { data: pp } = await supabase.rpc('partner_pending_payments')
+    partnerPending.value = Number(pp ?? 0)
     budgets.value = b.map((r) => num(r, ['monthly_limit'])) as unknown as Budget[]
     recurring.value = rc.map((r) => ({
       ...r,
@@ -334,6 +339,15 @@ export function useData() {
     await loadAll()
   }
 
+  /** Vuelve a crear un gasto recién borrado (Deshacer). Sale con id nuevo. */
+  async function reinsertExpense(x: Expense & { shares: Share[] }) {
+    await saveExpense({
+      amount: x.amount, spent_on: x.spent_on, category_id: x.category_id, description: x.description,
+      is_shared: x.is_shared, is_public: x.is_public, funding: x.funding, split_mode: x.split_mode,
+      paid_by: x.user_id, shares: x.shares,
+    })
+  }
+
   // ---- categorías --------------------------------------------
   function categoryError(e: { message: string } | null) {
     if (e && /duplicate key|unique/i.test(e.message)) throw new Error('Ya hay una categoría con ese nombre.')
@@ -430,6 +444,12 @@ export function useData() {
     await loadAll()
   }
 
+  async function updateContribution(id: string, patch: Pick<Contribution, 'amount' | 'contributed_on' | 'note' | 'direction'>) {
+    const { error: e } = await supabase.from('goal_contributions').update(patch).eq('id', id)
+    fail(e)
+    await loadAll()
+  }
+
   // ---- pagos detectados (Apple Pay → atajo → aquí) -------------
   const pendingPayments = computed(() => detected.value.filter((d) => d.status === 'pending'))
   const expenseById = computed<Record<string, Expense>>(() => {
@@ -469,6 +489,16 @@ export function useData() {
     fail(e)
     await loadAll()
   }
+  /** Un pago descartado vuelve a "pendiente" (Deshacer o Recuperar en Ajustes). */
+  async function restorePayment(paymentId: string) {
+    const { error: e } = await supabase.from('detected_payments').update({ status: 'pending', expense_id: null }).eq('id', paymentId)
+    fail(e)
+    await loadAll()
+  }
+  /** Últimos pagos descartados, por si se descartó uno sin querer. */
+  const dismissedPayments = computed(() =>
+    detected.value.filter((d) => d.status === 'dismissed').sort((a, b) => (a.paid_at < b.paid_at ? 1 : -1)).slice(0, 10),
+  )
   /** Crea el código secreto del atajo si aún no existe (o uno nuevo si se pide). */
   async function ensurePaymentToken(householdId: string, userId: string, renew = false) {
     if (paymentSettings.value && !renew) return
@@ -515,15 +545,15 @@ export function useData() {
 
   return {
     expenses, shares, categories, settlements, goals, contributions, budgets, recurring, runs, loading, loaded, error, offline, snapshotAt,
-    detected, paymentSettings, pendingPayments, paymentCards, kindForCard, kindForPayment, memoryFor, categoryForMerchant,
-    registerPayment, markPaymentDone, dismissPayment, ensurePaymentToken, setCardKind, sendTestPayment,
+    detected, paymentSettings, pendingPayments, dismissedPayments, partnerPending, paymentCards, kindForCard, kindForPayment, memoryFor, categoryForMerchant,
+    registerPayment, markPaymentDone, dismissPayment, restorePayment, ensurePaymentToken, setCardKind, sendTestPayment,
     savedByGoal, sharesByExpense, categoryById, expensesWithShares, potBudget, myBudget, setBudget,
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
     loadAll, ensureLoaded, refreshIfStale, refreshPayments, reset,
-    saveExpense, setExpensePublic, deleteExpense,
+    saveExpense, setExpensePublic, deleteExpense, reinsertExpense,
     addCategory, updateCategory, reorderCategories, deleteCategory, moveCategory,
     addSettlement, deleteSettlement,
     addGoal, updateGoal, deleteGoal,
-    addContribution, deleteContribution,
+    addContribution, updateContribution, deleteContribution,
   }
 }

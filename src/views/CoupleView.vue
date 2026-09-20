@@ -130,7 +130,9 @@ function setPotLimit(v: number | null) {
   run(() => data.setBudget('pot', v))
 }
 async function deleteExpense(x: ExpenseRow) {
-  if (await confirm({ title: 'Borrar gasto', message: `¿Borrar el gasto de ${formatEur(x.amount)}?` })) run(() => data.deleteExpense(x.id))
+  if (!(await confirm({ title: 'Borrar gasto', message: `¿Borrar el gasto de ${formatEur(x.amount)}?` }))) return
+  await run(() => data.deleteExpense(x.id))
+  editor.toast('Gasto borrado', { label: 'Deshacer', run: () => run(() => data.reinsertExpense(x)) })
 }
 function saveSettlement(v: Pick<Settlement, 'from_user' | 'to_user' | 'amount' | 'settled_on' | 'note'>) {
   showSettle.value = false
@@ -157,7 +159,12 @@ function moveGoal(g: SavingsGoal, amount: number, date: string, note: string | n
   run(() => data.addContribution(g.id, userId.value, amount, date, note, direction))
 }
 async function deleteContribution(c: Contribution) {
-  if (await confirm({ title: 'Borrar movimiento', message: `¿Borrar el movimiento de ${formatEur(c.amount)}?` })) run(() => data.deleteContribution(c.id))
+  if (!(await confirm({ title: 'Borrar movimiento', message: `¿Borrar el movimiento de ${formatEur(c.amount)}?` }))) return
+  await run(() => data.deleteContribution(c.id))
+  editor.toast('Movimiento borrado', { label: 'Deshacer', run: () => run(() => data.addContribution(c.goal_id, c.user_id, c.amount, c.contributed_on, c.note, c.direction)) })
+}
+function updateContribution(c: Contribution, amount: number, date: string, note: string | null, direction: 'in' | 'out') {
+  run(() => data.updateContribution(c.id, { amount, contributed_on: date, note, direction }))
 }
 </script>
 
@@ -171,6 +178,10 @@ async function deleteContribution(c: Contribution) {
     </div>
 
     <SegmentedControl v-model="tab" :options="tabs" />
+
+    <p v-if="partner && data.partnerPending.value" class="tiny partner-pending">
+      <UiIcon name="card" :size="14" /> {{ partner.display_name }} tiene {{ data.partnerPending.value }} {{ data.partnerPending.value === 1 ? 'pago detectado' : 'pagos detectados' }} sin apuntar.
+    </p>
 
     <p v-if="data.error.value || actionError" class="error">{{ actionError ?? data.error.value }}</p>
 
@@ -343,6 +354,7 @@ async function deleteContribution(c: Contribution) {
         @delete="deleteGoal"
         @move="moveGoal"
         @delete-contribution="deleteContribution"
+      @update-contribution="updateContribution"
       />
     </template>
 
@@ -363,3 +375,7 @@ async function deleteContribution(c: Contribution) {
     />
   </div>
 </template>
+
+<style scoped>
+.partner-pending { display: flex; align-items: center; gap: 0.3rem; margin: -0.3rem 0 0; color: var(--ink-2); }
+</style>

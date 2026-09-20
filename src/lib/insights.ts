@@ -208,10 +208,14 @@ export function computeInsights(input: InsightInput): Insight[] {
     if (!g.target || g.target <= 0) continue
     const remaining = round2(g.target - g.saved)
     if (remaining <= 0) {
-      out.push({ id: `hucha-ok:${g.name}`, topic: 'ahorro', tone: 'good', important: false, text: `¡Ya has llegado al objetivo de la hucha **${g.name}**!` })
+      out.push({ id: `hucha-ok:${g.name}`, topic: 'ahorro', tone: 'good', important: true, text: `¡Ya has llegado al objetivo de la hucha **${g.name}**! Puedes gastarlo o subir el objetivo.` })
     } else if (g.deadline) {
       const months = monthsUntil(g.deadline, today)
-      if (months === 0) continue
+      if (months === 0) {
+        out.push({ id: `hucha-vencida:${g.name}`, topic: 'ahorro', tone: 'warn', important: true,
+          text: `La hucha **${g.name}** vencía en ${formatMonth(monthOf(g.deadline))} y aún faltan ${formatEur(remaining)}. Cambia la fecha o el objetivo.` })
+        continue
+      }
       out.push({ id: `hucha-plan:${g.name}`, topic: 'ahorro', tone: 'info', important: false,
         text: `Para la hucha **${g.name}** te faltan ${formatEur(remaining)}: ${eur(monthlyPlan(remaining, months))} al mes hasta ${formatMonth(monthOf(g.deadline))}.` })
     }

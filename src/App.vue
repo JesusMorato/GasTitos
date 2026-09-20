@@ -173,7 +173,10 @@ async function saveExpense(input: ExpenseInput) {
   <ConfirmDialog />
   <PiggyAdvisor v-if="piggyOpen" :insights="piggy.insights.value" :name="me?.display_name" @close="piggyOpen = false" />
 
-  <div v-if="editor.state.toast" class="toast" role="status">{{ editor.state.toast }}</div>
+  <div v-if="editor.state.toast" class="toast" role="status">
+    {{ editor.state.toast }}
+    <button v-if="editor.state.toastAction" type="button" class="toast-btn" @click="editor.runToastAction()">{{ editor.state.toastAction.label }}</button>
+  </div>
 </template>
 
 <style>
@@ -183,6 +186,11 @@ async function saveExpense(input: ExpenseInput) {
   box-shadow: var(--shadow); z-index: 60; max-width: calc(100% - 32px);
   /* El aviso no debe tapar los toques: lo de debajo sigue siendo pulsable. */
   pointer-events: none;
+}
+.toast { display: flex; align-items: center; gap: 0.6rem; }
+.toast-btn {
+  pointer-events: auto; background: transparent; border: 0; color: var(--bg); font: inherit; font-weight: 800;
+  text-decoration: underline; text-underline-offset: 3px; padding: 0.3rem 0.2rem; min-height: 0; cursor: pointer;
 }
 .topbar .btn.icon { text-decoration: none; }
 .offline-bar { background: var(--warn-soft); color: var(--warn); font-size: 0.82rem; font-weight: 600; text-align: center; padding: 0.35rem 16px; }

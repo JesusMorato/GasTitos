@@ -25,6 +25,8 @@ const state = reactive<{
   /** Guardando en el servidor: el formulario sigue abierto con el botón desactivado. */
   saving: boolean
   toast: string | null
+  /** Botón dentro del aviso (p. ej. "Deshacer"). */
+  toastAction: { label: string; run: () => void | Promise<void> } | null
 }>({
   quickOpen: false,
   formOpen: false,
@@ -34,6 +36,7 @@ const state = reactive<{
   fromPayment: null,
   saving: false,
   toast: null,
+  toastAction: null,
 })
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined
@@ -65,10 +68,19 @@ export function useEditor() {
     state.prefill = undefined
     state.fromPayment = null
   }
-  function toast(msg: string) {
+  function toast(msg: string, action?: { label: string; run: () => void | Promise<void> }) {
     state.toast = msg
+    state.toastAction = action ?? null
     clearTimeout(toastTimer)
-    toastTimer = setTimeout(() => (state.toast = null), 3500)
+    // Con botón se deja más tiempo para poder pulsarlo.
+    toastTimer = setTimeout(() => { state.toast = null; state.toastAction = null }, action ? 7000 : 3500)
   }
-  return { state, openQuick, openNew, openEdit, close, toast }
+  function runToastAction() {
+    const a = state.toastAction
+    state.toast = null
+    state.toastAction = null
+    clearTimeout(toastTimer)
+    void a?.run()
+  }
+  return { state, openQuick, openNew, openEdit, close, toast, runToastAction }
 }

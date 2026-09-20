@@ -87,6 +87,18 @@ describe('computeInsights', () => {
     expect(r.find((i) => i.id === 'hucha-plan:Viaje')?.text).toContain('100,00') // 600 / 6 meses
   })
 
+  it('avisa (y marca) cuando una hucha se consigue o se pasa de fecha', () => {
+    const r = computeInsights(input([], { today: '2026-09-15', goals: [
+      { name: 'Sofá', target: 500, saved: 500, deadline: null },
+      { name: 'Viaje', target: 1000, saved: 400, deadline: '2026-06-01' },
+    ] }))
+    expect(r.find((i) => i.id === 'hucha-ok:Sofá')?.important).toBe(true)
+    const late = r.find((i) => i.id === 'hucha-vencida:Viaje')
+    expect(late?.tone).toBe('warn')
+    expect(late?.text).toContain('600,00')
+    expect(r.find((i) => i.id === 'hucha-plan:Viaje')).toBeUndefined()
+  })
+
   it('la huella solo cambia con los avisos importantes', () => {
     const items = [item('2026-09-02', 700, 'casa')]
     const a = insightsSignature(computeInsights(input(items, { limit: 600 })), '2026-09-15')
