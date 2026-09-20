@@ -1,16 +1,15 @@
 // Pagos detectados: reglas puras para proponer tipo y categoría.
 import type { DetectedPayment, Expense, PaymentKind } from '../types'
 
-/** Tipo de gasto que se propone para una tarjeta: lo que eligió el usuario en Ajustes
- *  o, si no hay nada, Revolut → cuenta conjunta y el resto → personal. */
-export function suggestKind(card: string, cardKinds: Record<string, PaymentKind>): PaymentKind {
-  const key = Object.keys(cardKinds).find((k) => k.trim().toLowerCase() === card.trim().toLowerCase())
-  if (key) return cardKinds[key]
-  return /revolut/i.test(card) ? 'pot' : 'personal'
+/** Lo que se recuerda de la última vez que se apuntó un pago del mismo comercio. */
+export interface Remembered {
+  category_id: string
+  kind: PaymentKind
+  split_mode: Expense['split_mode']
 }
 
-/** Categoría del último gasto que se apuntó desde un pago del mismo comercio, o null. */
-export function suggestCategory(merchant: string, detected: DetectedPayment[], expenseById: Record<string, Expense>): string | null {
+/** Último gasto apuntado desde un pago del mismo comercio: su categoría, tipo y reparto. */
+export function remembered(merchant: string, detected: DetectedPayment[], expenseById: Record<string, Expense>): Remembered | null {
   const m = normalize(merchant)
   if (!m) return null
   const done = detected
@@ -18,9 +17,28 @@ export function suggestCategory(merchant: string, detected: DetectedPayment[], e
     .sort((a, b) => (a.paid_at < b.paid_at ? 1 : -1))
   for (const d of done) {
     const e = expenseById[d.expense_id!]
-    if (e) return e.category_id
+    if (e) return { category_id: e.category_id, kind: kindOfExpense(e), split_mode: e.split_mode }
   }
   return null
+}
+
+export function kindOfExpense(e: Pick<Expense, 'is_shared' | 'funding'>): PaymentKind {
+  if (!e.is_shared) return 'personal'
+  return e.funding === 'pot' ? 'pot' : 'shared'
+}
+
+/** Tipo de gasto que se propone: lo recordado del comercio; si no, lo elegido en Ajustes
+ *  para la tarjeta; si no, Revolut → cuenta conjunta y el resto → personal. */
+export function suggestKind(card: string, cardKinds: Record<string, PaymentKind>, memory?: Remembered | null): PaymentKind {
+  if (memory) return memory.kind
+  const key = Object.keys(cardKinds).find((k) => k.trim().toLowerCase() === card.trim().toLowerCase())
+  if (key) return cardKinds[key]
+  return /revolut/i.test(card) ? 'pot' : 'personal'
+}
+
+/** Categoría del último gasto que se apuntó desde un pago del mismo comercio, o null. */
+export function suggestCategory(merchant: string, detected: DetectedPayment[], expenseById: Record<string, Expense>): string | null {
+  return remembered(merchant, detected, expenseById)?.category_id ?? null
 }
 
 /** Tarjetas distintas que han aparecido en los pagos, la más reciente primero. */

@@ -32,10 +32,16 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
   clave, "Enviar un pago de prueba" (mismo camino que el atajo) y tipo propuesto por tarjeta
   (`payment_settings.card_kinds`; sin ajuste, Revolut → Conjunta y el resto → Personal).
 - Migración `0009_pagos_detectados.sql`; `saveExpense` devuelve ahora el id del gasto.
-- Probado el 2026-09-18 con un atajo manual: llega "ok" y el pago sale en Yo. Dentro de la
+- **Funciona en producción (confirmado 2026-09-20 con un pago físico).** Dentro de la
   automatización la variable del pago se llama **"Transacción"** (propiedades Importe,
-  Comerciante, Tarjeta o pase). Una compra **online** con Apple Pay NO disparó la
-  automatización: queda por confirmar con un pago físico acercando el móvil.
+  Comerciante, Tarjeta o pase). Una compra **online** con Apple Pay NO dispara la
+  automatización: solo pagos acercando el móvil.
+- **Memoria por comercio** (`remembered` en `lib/payments.ts`): el último gasto apuntado
+  desde un pago del mismo comercio fija el tipo propuesto (manda sobre la tarjeta) y la
+  categoría. Con memoria, Personal y Conjunta se apuntan directos; Repartido también si
+  aquella vez fue con el reparto del hogar (partes calculadas con `computeShares`).
+- Decidido: sin notificaciones push (saldrían en cada pago) y sin enlazar pagos con gastos
+  fijos (las suscripciones no pasan por Apple Pay).
 - Al volver a la app se consultan siempre los pagos detectados (`refreshPayments`), aunque
   el resto de datos sea reciente. El pago de prueba lleva importe aleatorio para que no lo
   descarte el filtro de repetidos (mismo importe y comercio en 2 minutos).

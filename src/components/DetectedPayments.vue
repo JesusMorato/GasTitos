@@ -7,8 +7,8 @@ const props = defineProps<{
   items: DetectedPayment[]
   hasPartner: boolean
   categoryById: Record<string, Category>
-  /** Tipo propuesto para la tarjeta del pago (lo elegido en Ajustes). */
-  kindFor: (card: string) => PaymentKind
+  /** Tipo propuesto para el pago (memoria del comercio o tarjeta). */
+  kindFor: (p: DetectedPayment) => PaymentKind
   /** Categoría recordada para el comercio, si ya se apuntó otra vez. */
   categoryFor: (merchant: string) => string | null
   /** Id del pago que se está guardando o descartando (botones desactivados). */
@@ -51,7 +51,7 @@ function dismiss(p: DetectedPayment) {
             <div class="ellipsis"><strong>{{ p.merchant || 'Pago' }}</strong></div>
             <div class="tiny">
               {{ when(p.paid_at) }}<template v-if="p.card"> · {{ p.card }}</template>
-              <template v-if="categoryFor(p.merchant)"> · {{ categoryById[categoryFor(p.merchant)!]?.name }}</template>
+              <template v-if="categoryFor(p.merchant)"> · {{ categoryById[categoryFor(p.merchant)!]?.name }} (como la última vez)</template>
             </div>
           </div>
           <div class="amount">{{ formatEur(p.amount) }}</div>
@@ -63,7 +63,7 @@ function dismiss(p: DetectedPayment) {
             :key="k"
             type="button"
             class="small"
-            :class="kindFor(p.card) === k ? '' : 'secondary'"
+            :class="kindFor(p) === k ? '' : 'secondary'"
             :disabled="busy === p.id"
             @click="pick(p, k)"
           >{{ labels[k] }}</button>

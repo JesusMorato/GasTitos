@@ -9,8 +9,9 @@ No lee notificaciones ni SMS (el iPhone no lo permite): usa la automatización
 **"Transacción"** de la app **Atajos**, que salta al pagar con una tarjeta de la Cartera.
 
 **Qué pilla:** pagos con Apple Pay (móvil o Apple Watch) con las tarjetas que marques.
-**Qué no pilla:** pagos con la tarjeta de plástico, compras online sin Apple Pay y recibos
-domiciliados (esos van por gastos fijos).
+**Qué no pilla:** pagos con la tarjeta de plástico, compras online (aunque sean con Apple
+Pay: comprobado, no dispara la automatización) y recibos o suscripciones (esos van por
+gastos fijos).
 
 Cada persona lo monta en su iPhone con **su propio código**. Son unos 5 minutos.
 
@@ -89,14 +90,21 @@ Si no aparece:
 ## 4. Apuntar un pago detectado
 
 En la tarjeta "Pagos detectados" de **Yo**, cada pago tiene los botones Personal /
-Repartido / Conjunta. El que sale resaltado es el que se propone para esa tarjeta
-(por defecto: Revolut → Conjunta, el resto → Personal; se cambia en Ajustes).
+Repartido / Conjunta. El que sale resaltado es el que se propone:
 
-- **Personal** o **Conjunta**: si ya apuntaste antes un pago de ese comercio, se usa la misma
-  categoría y se guarda directamente. Si es la primera vez, se abre el formulario ya
-  relleno para que elijas la categoría.
-- **Repartido**: siempre se abre el formulario, para elegir cómo se reparte.
+1. Si ya apuntaste antes un pago **de ese mismo comercio**, se propone el tipo que le diste
+   la última vez (y se recuerda también su categoría: sale "como la última vez").
+2. Si es un comercio nuevo, se propone según la **tarjeta** (por defecto Revolut → Conjunta,
+   el resto → Personal; se cambia en Ajustes).
+
+- **Comercio ya conocido**: al tocar Personal o Conjunta se apunta directamente con la
+  categoría recordada. Repartido también se apunta directo si la última vez fue con el
+  reparto normal del hogar; si fue otro reparto, se abre el formulario.
+- **Comercio nuevo**: se abre el formulario ya relleno para elegir categoría (y reparto).
 - **✕**: lo descarta (no se apunta ni vuelve a salir).
+
+Importante: lo "recordado" sale del último pago que apuntaste de ese comercio, así que si
+un día lo apuntas de otra forma, a partir de entonces propone esa.
 
 ## Seguridad
 

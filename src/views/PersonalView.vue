@@ -6,7 +6,7 @@ import { useData, type GoalInput } from '../composables/useData'
 import { useEditor, type ExpenseRow } from '../composables/useEditor'
 import { useMonth } from '../composables/useMonth'
 import { useConfirm } from '../composables/useConfirm'
-import { formatEur, lastMonths, localIso, monthOf, myShareTotal, round2, shortMonth, sum, totalsByMonth } from '../lib/money'
+import { computeShares, formatEur, lastMonths, localIso, monthOf, myShareTotal, round2, shortMonth, sum, totalsByMonth } from '../lib/money'
 import { myItems } from '../lib/insights'
 import { breakdownBy } from '../lib/breakdown'
 import type { Contribution, DetectedPayment, PaymentKind, SavingsGoal } from '../types'
@@ -109,17 +109,23 @@ async function run(fn: () => Promise<void>) {
 }
 
 // --- pagos detectados ---
-// Personal / Conjunta con categoría recordada: se apunta directo. Si no, se abre el
-// formulario ya relleno (y Repartido siempre, para elegir el reparto).
+// Si el comercio ya se apuntó otra vez, se repite su categoría y se guarda directo
+// (Repartido solo si aquella vez fue con el reparto normal del hogar). Si no, se abre
+// el formulario ya relleno.
 const paymentBusy = ref<string | null>(null)
 function pickPayment(p: DetectedPayment, kind: PaymentKind) {
-  const category = data.categoryForMerchant(p.merchant)
+  const memory = data.memoryFor(p.merchant)
+  const category = memory?.category_id
   const base = { amount: p.amount, spent_on: localIso(new Date(p.paid_at)), description: p.merchant || null }
-  if (kind !== 'shared' && category) {
+  const directShared = kind === 'shared' && memory?.split_mode === 'household' && state.members.length === 2
+  if (category && (kind !== 'shared' || directShared)) {
     paymentBusy.value = p.id
     run(async () => {
       try {
-        await data.registerPayment(p.id, { ...base, category_id: category, is_shared: kind === 'pot', funding: kind === 'pot' ? 'pot' : 'personal', split_mode: 'household' })
+        const input = kind === 'shared'
+          ? { ...base, category_id: category, is_shared: true, funding: 'personal' as const, split_mode: 'household' as const, paid_by: userId.value, shares: computeShares(p.amount, 'household', state.members, userId.value) }
+          : { ...base, category_id: category, is_shared: kind === 'pot', funding: kind === 'pot' ? 'pot' as const : 'personal' as const, split_mode: 'household' as const }
+        await data.registerPayment(p.id, input)
         editor.toast('Gasto apuntado')
       } finally {
         paymentBusy.value = null
@@ -190,7 +196,7 @@ async function deleteContribution(c: Contribution) {
       :items="data.pendingPayments.value"
       :has-partner="!!partner"
       :category-by-id="data.categoryById.value"
-      :kind-for="data.kindForCard"
+      :kind-for="data.kindForPayment"
       :category-for="data.categoryForMerchant"
       :busy="paymentBusy"
       @pick="pickPayment"

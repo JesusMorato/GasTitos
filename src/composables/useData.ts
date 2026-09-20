@@ -8,7 +8,7 @@ import type {
 } from '../types'
 import { goalBalance, monthOf, todayIso, type Share } from '../lib/money'
 import { isNetworkError, loadSnapshot, online, saveSnapshot } from '../lib/offline'
-import { cardsSeen, newToken, suggestCategory, suggestKind } from '../lib/payments'
+import { cardsSeen, newToken, remembered, suggestKind, type Remembered } from '../lib/payments'
 
 // Supabase devuelve como mucho 1000 filas por consulta. Con los años una pareja
 // pasa de ahí (y el balance necesita TODOS los repartidos), así que se pide por
@@ -438,11 +438,20 @@ export function useData() {
     return map
   })
   const paymentCards = computed(() => cardsSeen(detected.value))
+  /** Lo recordado del comercio (última vez que se apuntó un pago suyo), o null. */
+  function memoryFor(merchant: string): Remembered | null {
+    return remembered(merchant, detected.value, expenseById.value)
+  }
+  /** Tipo propuesto para un pago: memoria del comercio, luego la tarjeta. */
+  function kindForPayment(p: DetectedPayment): PaymentKind {
+    return suggestKind(p.card, paymentSettings.value?.card_kinds ?? {}, memoryFor(p.merchant))
+  }
+  /** Tipo propuesto solo por la tarjeta (Ajustes). */
   function kindForCard(card: string): PaymentKind {
     return suggestKind(card, paymentSettings.value?.card_kinds ?? {})
   }
   function categoryForMerchant(merchant: string): string | null {
-    return suggestCategory(merchant, detected.value, expenseById.value)
+    return memoryFor(merchant)?.category_id ?? null
   }
   /** Apunta el gasto y marca el pago como hecho. */
   async function registerPayment(paymentId: string, input: ExpenseInput) {
@@ -506,7 +515,7 @@ export function useData() {
 
   return {
     expenses, shares, categories, settlements, goals, contributions, budgets, recurring, runs, loading, loaded, error, offline, snapshotAt,
-    detected, paymentSettings, pendingPayments, paymentCards, kindForCard, categoryForMerchant,
+    detected, paymentSettings, pendingPayments, paymentCards, kindForCard, kindForPayment, memoryFor, categoryForMerchant,
     registerPayment, markPaymentDone, dismissPayment, ensurePaymentToken, setCardKind, sendTestPayment,
     savedByGoal, sharesByExpense, categoryById, expensesWithShares, potBudget, myBudget, setBudget,
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
