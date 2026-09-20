@@ -71,14 +71,14 @@ creaste la cuenta en el punto 4. Supabase enlaza ambas formas de entrar por el e
 verificado. Si es distinto, con el registro cerrado Google dirá "Signups not
 allowed" y la app mostrará *"Esta app es privada"*.
 
-## 6. Primera prueba
+## 6. Primera prueba ✅ (la app se usa a diario desde 2026-09-16)
 
 - [x] Abre https://jesusmorato.github.io/GasTitos/ y entra con la primera cuenta.
 - [x] Crea el hogar. Copia el código de invitación.
-- [ ] Entra con la segunda cuenta (otro navegador o incógnito) y únete con el código.
-- [ ] Apunta un gasto compartido y uno personal; comprueba desde la otra cuenta que
+- [x] Entra con la segunda cuenta (otro navegador o incógnito) y únete con el código.
+- [x] Apunta un gasto compartido y uno personal; comprueba desde la otra cuenta que
       el personal no se ve hasta que pulsas el candado.
-- [ ] Cuéntale a Claude el resultado, funcione o no.
+- [x] Cuéntale a Claude el resultado, funcione o no.
 
 ## 7. Instalar la app en el móvil (icono propio)
 
@@ -88,11 +88,12 @@ allowed" y la app mostrará *"Esta app es privada"*.
   pantalla de inicio".
 - Si ya la tenías añadida con el icono antiguo, bórrala y vuelve a añadirla.
 
-## 8. Pagos automáticos desde el iPhone (cada persona en su móvil)
+## 8. Pagos automáticos desde el iPhone (cada persona en su móvil) ✅ (probado el 2026-09-20)
 
-- [ ] Esperar a que el workflow "Migraciones Supabase" aplique `0009_pagos_detectados.sql`
+- [x] Esperar a que el workflow "Migraciones Supabase" aplique `0009_pagos_detectados.sql`
       (Actions en verde).
-- [ ] En cada iPhone: seguir `docs/PAGOS-DETECTADOS.md` (Ajustes → "Activar: crear mi
+- [x] En cada iPhone: seguir `docs/PAGOS-DETECTADOS.md` (Ajustes → "Activar: crear mi
       código" y montar la automatización "Transacción" en Atajos). Unos 5 minutos.
-- [ ] Probar primero con "Enviar un pago de prueba" y después con un pago real pequeño
+- [x] Probar primero con "Enviar un pago de prueba" y después con un pago real pequeño
       con cada tarjeta.
+      Si la otra persona aún no lo ha montado en su iPhone, le vale la misma guía.

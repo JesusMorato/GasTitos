@@ -269,8 +269,9 @@ una: tests en verde, build correcto, push, documentación actualizada.
 | **5. Recurrentes** ✅ 2026-09-16 | Reglas mensuales para gastos fijos, aportaciones al bote y a huchas. Ejecución al abrir la app. | M | El alquiler aparece solo el día 1. |
 | **6. Objetivos en pareja v2** ✅ 2026-09-16 (quién ha puesto qué) | Barras por persona, plan repartido, estado por persona. | S | Se ve quién va por debajo del plan. |
 | **7. Ingresos y presupuesto** | Ingresos privados, tasa de ahorro, "podrías ahorrar X", presupuestos por categoría con avisos. | M | Tasa de ahorro correcta; aviso al pasar el 80 %. |
-| **8. Calidad de vida** ✅ parcial 2026-09-16 (instalable, icono, modo oscuro) | PWA instalable con icono, modo oscuro, exportar CSV, navegación inferior con botón ➕. | M | Instalada en el móvil, funciona en oscuro. |
-| **9. Extras** | Redondeo, reto 52 semanas, comentarios en gastos, login con Google. | S cada uno | A demanda. |
+| **8. Calidad de vida** ✅ 2026-09-17 (instalable, icono, modo oscuro, CSV, sin conexión) | PWA instalable con icono, modo oscuro, exportar CSV, navegación inferior con botón ➕. | M | Instalada en el móvil, funciona en oscuro. |
+| **9. Extras** | ~~Redondeo, reto 52 semanas~~ (descartados), comentarios en gastos ✅ (nota), login con Google (código listo, falta configurar). | S cada uno | A demanda. |
+| **10. Pagos detectados** ✅ 2026-09-20 | Apple Pay → Atajos → GasTitos, bolita, memoria por comercio. No estaba en el plan original. | M | Un pago físico con el móvil aparece en Yo y se apunta de un toque. |
 
 Tamaños: S = una sesión corta, M = una sesión larga o dos, L = dos o tres.
 
@@ -368,8 +369,8 @@ Al dueño le gustan las ilustraciones planas (hucha, planta, personas) y NO los 
 "tipo teléfono" en la interfaz: engranaje de ajustes, iconos de los tipos de gasto en el
 menú ➕, pagos entre vosotros, etc. Regla: toda la interfaz con iconos SVG de trazo en el
 mismo estilo que las categorías; ilustraciones planas para lo grande; emojis solo donde
-el usuario los elige (categorías y huchas). Pendiente de aplicar: ver lista de iconos a
-sustituir en `CLAUDE.md`.
+el usuario los elige (categorías y huchas). Aplicado: la regla está en `CLAUDE.md` y la
+interfaz ya no lleva emojis fuera de categorías y huchas.
 
 ### 8.3 "Bote" pasa a llamarse "cuenta conjunta" (2026-09-16)
 
@@ -385,6 +386,6 @@ del hogar de lo pagado con la cuenta conjunta (pendiente de confirmar).
 - Pestaña Juntos pasa a Huchas; lo que comparte la pareja, plegado en Repartidos. Hecho.
 - Logo: dirección B (hucha). Integrado como icono, favicon y marca.
 - Google oculto hasta configurarlo. Hecho.
-- Pendiente de decidir: ingresos (tasa de ahorro). Pendiente de hacer: comentarios en gastos, ver todos los gastos / buscador, editar movimientos de hucha.
+- Pendiente de decidir: ingresos (tasa de ahorro). Hechos después: nota en cada gasto (comentarios) y buscador (v0.6). Sigue pendiente: editar movimientos de hucha.
 - Media de las barras solo con meses con datos; proyección de hucha desde su creación. Hecho.
 - Recuperar contraseña y exportar CSV. Hecho.

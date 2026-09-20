@@ -251,21 +251,33 @@ se creó el 2026-09-15.
 
 ## Pendiente / ideas
 
-El plan completo por fases está en `PLAN.md`.
+El plan completo por fases está en `PLAN.md`. Revisado el 2026-09-20: todo lo pedido está
+hecho y publicado. Lo que sigue son evolutivos abiertos, ninguno comprometido.
 
-### Pagos detectados con Apple Pay ✅ (programado el 2026-09-18)
+### Requieren una decisión del dueño
 
-Hecho en v0.7 (ver "Estado"). Queda por hacer en los móviles: montar el atajo siguiendo
-`docs/PAGOS-DETECTADOS.md` y confirmar que salta con las tarjetas de Bankinter y Revolut.
-Si con alguna no salta, no hay otra vía en iPhone (no se pueden leer notificaciones ni SMS);
-la alternativa sería Open Banking, descartada de momento por coste y complejidad.
+- **Ingresos y tasa de ahorro** (fase 7 del plan): registrar ingresos privados para
+  calcular "podrías ahorrar X". Es la única fase del plan sin hacer y sigue sin decidirse.
+- **Login con Google**: el código está listo y oculto (`GOOGLE_LOGIN = false` en
+  `LoginView.vue`); solo falta la configuración manual del punto 5 de
+  `CONFIGURACION-MANUAL.md`. Opcional.
 
-### Ideas sueltas anteriores
+### Mejoras pequeñas, a demanda
 
-- Exportar CSV con el menú de compartir del iPhone, ingresos, avisos en el móvil, deshacer.
-- Avisos cuando un objetivo se cumple o vence.
-- Chat con IA de verdad para el cerdito (Edge Function con la clave; solo resúmenes).
-- Modo oscuro.
+- **Editar un movimiento de hucha** (ahora solo se puede borrar y volver a meter).
+- **Deshacer** tras borrar un gasto o un movimiento (un botón en el aviso de abajo).
+- **Exportar CSV con el menú de compartir del iPhone** (hoy es una descarga, que en
+  Safari queda escondida en "Descargas").
+- **Aviso del cerdito cuando una hucha se cumple**: hoy solo dice cuánto falta al mes.
+- **Pagos detectados**: historial de descartados para recuperar uno; borrar automáticamente
+  los de hace meses; que en Pareja se vea "tu pareja tiene N pagos por apuntar".
+
+### Descartado
+
+- Notificaciones push (saldrían en cada pago). Enlazar pagos detectados con gastos fijos
+  (las suscripciones no pasan por Apple Pay). Open Banking (coste y complejidad).
+- Chat con IA para el cerdito: se queda con reglas.
+- Retos de ahorro y redondeo (decisión del 2026-09-16).
 
 ## Cómo trabajar
 
