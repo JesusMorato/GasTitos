@@ -11,7 +11,8 @@ No lee notificaciones ni SMS (el iPhone no lo permite): usa la automatización
 **Qué pilla:** pagos con Apple Pay (móvil o Apple Watch) con las tarjetas que marques.
 **Qué no pilla:** pagos con la tarjeta de plástico, compras online (aunque sean con Apple
 Pay: comprobado, no dispara la automatización) y recibos o suscripciones (esos van por
-gastos fijos).
+gastos fijos). Para lo primero y lo segundo hay un atajo manual: ver más abajo
+"Apuntar a mano lo que el atajo no pilla".
 
 Cada persona lo monta en su iPhone con **su propio código**. Son unos 5 minutos.
 
@@ -108,6 +109,63 @@ Repartido / Conjunta. El que sale resaltado es el que se propone:
 
 Importante: lo "recordado" sale del último pago que apuntaste de ese comercio, así que si
 un día lo apuntas de otra forma, a partir de entonces propone esa.
+
+## Apuntar a mano lo que el atajo no pilla (internet, tarjeta física)
+
+Las compras por internet no disparan la automatización (comprobado: solo salta con los
+pagos sin contacto). Para que no haya que abrir la app y rellenar el formulario, se monta
+un **segundo atajo, este de accionar a mano**, que manda el pago a la misma bandeja de
+"Pagos detectados". Usa la misma función `register_payment` y el mismo código secreto.
+
+### Montarlo
+
+1. Atajos → pestaña **Atajos** → **+** arriba a la derecha.
+2. Añade **"Pedir entrada"**. Tipo: **Número**. Pregunta: `¿Cuánto?`
+3. Añade otra **"Pedir entrada"**. Tipo: **Texto**. Pregunta: `¿Dónde?`
+4. Añade **"Obtener contenido de URL"** y despliega "Mostrar más":
+   - **URL**: la de Ajustes → Pagos automáticos.
+   - **Método**: `POST`
+   - **Cabeceras**: `apikey` con la clave pública, y `Content-Type` con `application/json`.
+   - **Cuerpo**: `JSON`, cuatro campos de texto:
+
+     | Clave | Valor |
+     |---|---|
+     | `p_token` | tu código secreto |
+     | `p_amount` | la variable de la primera pregunta (el número) |
+     | `p_merchant` | la variable de la segunda pregunta (el texto) |
+     | `p_card` | `Internet` escrito tal cual |
+5. Añade **"Mostrar notificación"** con el **Contenido de URL**, para ver si ha entrado.
+6. Nómbralo "Apuntar gasto" y elige un icono.
+
+### Cómo se acciona
+
+Cualquiera de estas, la que te resulte más cómoda:
+
+- **Botón de acción** (iPhone 15 Pro y posteriores): Ajustes del iPhone → Botón de acción →
+  Atajo → "Apuntar gasto". Es lo más rápido: un botón físico.
+- **Pantalla de inicio**: en Atajos, mantén pulsado el atajo → Compartir → Añadir a
+  pantalla de inicio.
+- **Centro de control** o **widget**, si lo prefieres a la vista.
+
+### Variante todavía más rápida: desde el menú de compartir
+
+Se puede hacer una segunda versión que se acciona **desde la página de confirmación de la
+compra**, y así no hay que escribir el nombre de la tienda:
+
+1. En los ajustes del atajo (el botón de información), activa **"Mostrar en la hoja para
+   compartir"** y acepta URLs como entrada.
+2. Quita la pregunta `¿Dónde?` y en `p_merchant` pon la variable **Entrada del atajo** →
+   propiedad **Dominio** (o **Nombre**).
+
+Así, al terminar una compra en Safari: compartir → "Apuntar gasto" → escribes el importe y
+listo. La tienda la saca de la web.
+
+### Qué pasa luego
+
+El pago aparece en **Yo → Pagos detectados** igual que los automáticos, con la bolita, y se
+apunta de un toque. Como llega con la tarjeta `Internet`, en Ajustes → Pagos automáticos
+puedes decidir qué tipo se propone para ella (Personal, Repartido o Conjunta), y a partir
+del segundo pago de la misma tienda se apunta directo con su categoría.
 
 ## Seguridad
 
