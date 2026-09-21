@@ -15,7 +15,7 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
-**2026-09-21 · v0.8 — avisos en el móvil cuando la pareja apunta un gasto que te toca.**
+**2026-09-21 · v0.8 — avisos en el móvil cuando la pareja apunta un gasto que te toca. ✅ funcionando en los dos iPhone.**
 
 - **Qué avisa**: solo los gastos **nuevos** repartidos o de la **cuenta conjunta**. Los
   personales no (son privados) y los fijos automáticos tampoco (ya se esperan).
@@ -33,10 +33,18 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
   con la CLI de Supabase (necesita el secret `SUPABASE_ACCESS_TOKEN`; sin él avisa y sale
   en verde). El identificador del proyecto se saca de la URL que ya está en `.env`.
 - Migración `0011_avisos_push.sql`. Service worker a `gastitos-v2`.
-- **Pendiente de configurar** (ver `docs/AVISOS.md`): generar las claves con
-  `node scripts/generar-claves-vapid.mjs`, pegar la pública en `.env`, crear los secretos
-  `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY` en Supabase y `SUPABASE_ACCESS_TOKEN` en
-  GitHub. Hasta entonces el interruptor sale como "aún no configurado" y nada se rompe.
+- **Configurado y probado el 2026-09-21.** Secretos en Supabase: `VAPID_PUBLIC_KEY`,
+  `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` (este último tiene que ser un `mailto:`, o Apple
+  rechaza los envíos con un 403). En GitHub: `SUPABASE_ACCESS_TOKEN`.
+- **Tres cosas aprendidas al ponerlo en marcha**, ya resueltas en el código:
+  1. Los secretos se leen **en cada petición**, no al arrancar la función: crearlos ya no
+     obliga a volver a publicarla.
+  2. Un permiso del navegador queda atado a la clave pública con la que se pidió. Si se
+     cambian las claves, hay que renovarlo: `mismaClave` (`lib/push.ts`) lo detecta y
+     `usePush.activar` tira el permiso viejo y pide otro.
+  3. El diagnóstico de Ajustes ("Probar el envío de verdad") manda un aviso a uno mismo y
+     enseña el código del servicio, el remitente usado y **los nombres de los secretos que
+     ve la función**. Sin eso no había forma de depurar sin entrar en Supabase.
 
 **2026-09-20 · v0.7.1 — mejoras pequeñas: deshacer, editar movimientos, compartir CSV, avisos de hucha y pagos de la pareja.**
 
@@ -292,11 +300,6 @@ se creó el 2026-09-15.
 
 El plan completo por fases está en `PLAN.md`. Revisado el 2026-09-20: todo lo pedido está
 hecho y publicado. Lo que sigue son evolutivos abiertos, ninguno comprometido.
-
-### Requieren que el dueño haga algo
-
-- **Terminar de configurar los avisos**: los cuatro pasos de `docs/AVISOS.md`. El código
-  está hecho y publicado; falta solo la configuración manual.
 
 ### Requieren una decisión del dueño
 
