@@ -345,6 +345,7 @@ export function useData() {
     claves?: boolean
     sujeto?: string
     aparatos?: number
+    secretos?: string[]
     resultados?: Array<{ aparato: string; servicio: string; codigo: number; detalle: string }>
     error?: string
   }> {

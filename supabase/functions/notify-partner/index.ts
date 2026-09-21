@@ -17,11 +17,35 @@ import { b64urlABytes, cabeceraVapid, cifrar } from './webpush.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
-const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
-// Apple es estricta con esto: acepta mejor un "mailto:" que una dirección https.
-// Se pone en los secretos de Supabase como VAPID_SUBJECT.
-const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'https://jesusmorato.github.io/GasTitos/'
+
+interface Config {
+  publica: string
+  privada: string
+  sujeto: string
+}
+
+// Se leen en cada petición, no al arrancar: si acabas de crear los secretos en
+// Supabase, no hace falta volver a publicar la función para que los vea.
+function config(): Config {
+  return {
+    publica: Deno.env.get('VAPID_PUBLIC_KEY') ?? '',
+    privada: Deno.env.get('VAPID_PRIVATE_KEY') ?? '',
+    // Apple es estricta con esto: acepta mejor un "mailto:" que una dirección https.
+    sujeto: Deno.env.get('VAPID_SUBJECT') ?? 'https://jesusmorato.github.io/GasTitos/',
+  }
+}
+
+/**
+ * Nombres (NUNCA valores) de los secretos que empiezan por VAPID que la función
+ * está viendo. Sirve para detectar un nombre mal escrito desde la propia app.
+ */
+function nombresVapid(): string[] {
+  try {
+    return Object.keys(Deno.env.toObject()).filter((k) => k.toUpperCase().includes('VAPID')).sort()
+  } catch {
+    return []
+  }
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -67,7 +91,7 @@ interface Resultado {
   detalle: string
 }
 
-async function enviar(s: Suscripcion, mensaje: string): Promise<Resultado> {
+async function enviar(s: Suscripcion, mensaje: string, cfg: Config): Promise<Resultado> {
   const servicio = new URL(s.endpoint).hostname
   try {
     const res = await fetch(s.endpoint, {
@@ -79,9 +103,9 @@ async function enviar(s: Suscripcion, mensaje: string): Promise<Resultado> {
         Urgency: 'normal',
         Authorization: await cabeceraVapid({
           endpoint: s.endpoint,
-          clavePublica: VAPID_PUBLIC,
-          clavePrivada: VAPID_PRIVATE,
-          sujeto: VAPID_SUBJECT,
+          clavePublica: cfg.publica,
+          clavePrivada: cfg.privada,
+          sujeto: cfg.sujeto,
         }),
       },
       body: await cifrar(s.p256dh, s.auth, mensaje),
@@ -137,13 +161,15 @@ Deno.serve(async (req) => {
     if (!quien) return json({ error: 'Sin sesión' }, 401)
 
     const peticion = await req.json().catch(() => ({})) as { expense_id?: unknown; prueba?: unknown }
-    const claves = Boolean(VAPID_PUBLIC && VAPID_PRIVATE)
+    const cfg = config()
+    const claves = Boolean(cfg.publica && cfg.privada)
 
     // ---------- prueba: me aviso a mí mismo y cuento qué ha pasado ----------
     if (peticion.prueba === true) {
       const mias = await suscripcionesDe(quien)
+      const visto = nombresVapid()
       if (!claves || mias.length === 0) {
-        return json({ estado: 'prueba', claves, sujeto: VAPID_SUBJECT, aparatos: mias.length, resultados: [] })
+        return json({ estado: 'prueba', claves, sujeto: cfg.sujeto, aparatos: mias.length, secretos: visto, resultados: [] })
       }
       const mensaje = JSON.stringify({
         titulo: 'Prueba de envío',
@@ -152,8 +178,8 @@ Deno.serve(async (req) => {
         hash: '#/ajustes',
       })
       const resultados = []
-      for (const s of mias) resultados.push(await enviar(s, mensaje))
-      return json({ estado: 'prueba', claves, sujeto: VAPID_SUBJECT, aparatos: mias.length, resultados })
+      for (const s of mias) resultados.push(await enviar(s, mensaje, cfg))
+      return json({ estado: 'prueba', claves, sujeto: cfg.sujeto, aparatos: mias.length, secretos: visto, resultados })
     }
 
     // ---------- aviso de verdad a la pareja ----------
@@ -206,7 +232,7 @@ Deno.serve(async (req) => {
 
     const mensaje = JSON.stringify({ titulo, cuerpo, etiqueta: `gasto-${gasto.id}`, hash: '#/pareja' })
     const resultados = []
-    for (const s of suscripciones) resultados.push(await enviar(s, mensaje))
+    for (const s of suscripciones) resultados.push(await enviar(s, mensaje, cfg))
 
     return json({ estado: 'ok', enviados: resultados.filter((r) => r.codigo >= 200 && r.codigo < 300).length, resultados })
   } catch (e) {

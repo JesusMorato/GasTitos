@@ -200,33 +200,59 @@ async function cambiarAvisos(activar: boolean) {
 
 // Prueba de verdad: manda un aviso a mis propios aparatos por el mismo camino
 // que usa el aviso a la pareja, y cuenta qué ha contestado el servicio.
+// El resultado se enseña DENTRO de la tarjeta: el aviso de arriba de la página
+// no se ve cuando estás a media pantalla.
 const probandoEnvio = ref(false)
+const envioOk = ref(false)
+const envioTexto = ref<string | null>(null)
+const envioDetalle = ref<string | null>(null)
+
 async function probarEnvio() {
-  msg.value = null
-  err.value = null
   probandoEnvio.value = true
+  envioTexto.value = null
+  envioDetalle.value = null
   try {
-    const r = await data.testPushDelivery()
+    // Si la función no contesta, mejor decirlo que dejar el botón girando.
+    const r = await Promise.race([
+      data.testPushDelivery(),
+      new Promise<never>((_, rechazar) =>
+        setTimeout(() => rechazar(new Error('La función no ha contestado en 20 segundos. Mira si está publicada en Supabase → Edge Functions.')), 20000),
+      ),
+    ])
+    const lista = r.resultados ?? []
+    const bien = lista.filter((x) => x.codigo >= 200 && x.codigo < 300)
+    envioDetalle.value = [
+      `aparatos apuntados: ${r.aparatos ?? 0}`,
+      `claves: ${r.claves === false ? 'faltan' : 'puestas'}`,
+      `remitente: ${r.sujeto ?? '—'}`,
+      `secretos que ve la función: ${(r.secretos ?? []).join(', ') || 'ninguno con VAPID en el nombre'}`,
+      ...lista.map((x) => `${x.servicio} → ${x.codigo}${x.detalle ? ` ${x.detalle}` : ''}`),
+    ].join(' · ')
+
     if (r.error) {
-      err.value = `La función ha respondido: ${r.error}`
+      envioOk.value = false
+      envioTexto.value = `La función ha respondido con un error: ${r.error}`
     } else if (r.claves === false) {
-      err.value = 'Faltan los secretos VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en Supabase → Edge Functions → Secrets.'
+      envioOk.value = false
+      envioTexto.value = (r.secretos ?? []).length > 0
+        ? `La función ve estos secretos: ${(r.secretos ?? []).join(', ')}. Hacen falta exactamente VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY (mayúsculas y guiones bajos).`
+        : 'La función no ve ningún secreto con VAPID en el nombre. Créalos en Supabase → Project Settings → Edge Functions → Secrets (no en Vault ni en Database).'
     } else if (!r.aparatos) {
-      err.value = 'Este aparato no está apuntado todavía. Pulsa Activar y vuelve a probar.'
+      envioOk.value = false
+      envioTexto.value = 'Este aparato no está apuntado todavía. Dale a Activar y vuelve a probar.'
+    } else if (bien.length > 0) {
+      envioOk.value = true
+      envioTexto.value = `Enviado a ${bien.length} ${bien.length === 1 ? 'aparato' : 'aparatos'}. El aviso debería llegarte en unos segundos.`
     } else {
-      const lista = r.resultados ?? []
-      const bien = lista.filter((x) => x.codigo >= 200 && x.codigo < 300)
-      if (bien.length > 0) {
-        msg.value = `Enviado a ${bien.length} ${bien.length === 1 ? 'aparato' : 'aparatos'}. El aviso debería llegarte en unos segundos.`
-      } else {
-        const p = lista[0]
-        err.value = p
-          ? `${p.servicio} ha rechazado el envío (código ${p.codigo}). ${p.detalle || ''} · Remitente usado: ${r.sujeto ?? '—'}`.trim()
-          : 'No se ha podido enviar a ningún aparato.'
-      }
+      const primero = lista[0]
+      envioOk.value = false
+      envioTexto.value = primero
+        ? `${primero.servicio} ha rechazado el envío con el código ${primero.codigo}.`
+        : 'No se ha podido enviar a ningún aparato.'
     }
   } catch (e) {
-    err.value = (e as Error).message
+    envioOk.value = false
+    envioTexto.value = (e as Error).message
   } finally {
     probandoEnvio.value = false
   }
@@ -403,8 +429,11 @@ function exportGoals() {
         </div>
         <p v-if="push.estado.activo" class="help">
           "Probar el envío de verdad" te manda un aviso a ti mismo por el mismo camino que usa el aviso a tu pareja.
-          Si algo falla, aquí arriba sale el motivo exacto.
         </p>
+        <div v-if="envioTexto" class="resultado-envio" :class="envioOk ? 'bien' : 'mal'">
+          <p style="margin: 0">{{ envioTexto }}</p>
+          <p v-if="envioDetalle" class="detalle">{{ envioDetalle }}</p>
+        </div>
       </template>
       <p v-else class="help" style="margin-top: 0">{{ push.situacion.value.texto }}</p>
     </div>
@@ -576,6 +605,23 @@ function exportGoals() {
 </template>
 
 <style scoped>
+.resultado-envio {
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--r-md);
+  font-size: 0.9rem;
+  border-left: 3px solid;
+}
+.resultado-envio.bien { background: var(--accent-soft); color: var(--accent-ink); border-left-color: var(--pos); }
+.resultado-envio.mal { background: var(--neg-soft); color: var(--neg); border-left-color: var(--neg); }
+.resultado-envio .detalle {
+  margin: 0.35rem 0 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  word-break: break-word;
+  opacity: 0.85;
+}
 .secret {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.8rem; background: var(--surface-2);
   padding: 0.45rem 0.6rem; border-radius: var(--r-md); word-break: break-all; min-width: 0;
