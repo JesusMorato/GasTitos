@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { claveAplicacion, estadoAvisos, nombreAparato } from './push'
+import { claveAplicacion, estadoAvisos, mismaClave, nombreAparato } from './push'
 
 const base = { clave: 'abc', soportado: true, ios: false, instalada: false, permiso: 'default' as const }
 
@@ -61,5 +61,18 @@ describe('nombreAparato', () => {
   })
   it('lo que no conoce se queda en genérico', () => {
     expect(nombreAparato('algo raro')).toBe('Este navegador')
+  })
+})
+
+describe('mismaClave', () => {
+  it('reconoce la clave con la que se pidió el permiso', () => {
+    expect(mismaClave(claveAplicacion('aG9sYQ').buffer as ArrayBuffer, 'aG9sYQ')).toBe(true)
+  })
+  it('detecta que la clave del servidor ha cambiado', () => {
+    expect(mismaClave(claveAplicacion('aG9sYQ').buffer as ArrayBuffer, 'YWRpb3M')).toBe(false)
+  })
+  it('sin permiso previo o sin clave, no coincide', () => {
+    expect(mismaClave(null, 'aG9sYQ')).toBe(false)
+    expect(mismaClave(claveAplicacion('aG9sYQ').buffer as ArrayBuffer, '')).toBe(false)
   })
 })

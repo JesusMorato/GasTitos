@@ -2,7 +2,7 @@
 // Las llamadas a Supabase están en useData.ts; aquí solo se habla con el navegador.
 import { computed, reactive } from 'vue'
 import { useData } from './useData'
-import { claveAplicacion, estadoAvisos, nombreAparato } from '../lib/push'
+import { claveAplicacion, estadoAvisos, mismaClave, nombreAparato } from '../lib/push'
 
 const estado = reactive({
   /** Este aparato tiene los avisos puestos. */
@@ -51,7 +51,9 @@ export function usePush() {
     try {
       const reg = await registro()
       const sub = await reg?.pushManager.getSubscription()
-      if (!sub) {
+      // Un permiso pedido con otra clave ya no sirve: se enseña como desactivado
+      // para que al darle a Activar se renueve.
+      if (!sub || !mismaClave(sub.options.applicationServerKey, CLAVE)) {
         estado.activo = false
         return
       }
@@ -79,9 +81,17 @@ export function usePush() {
         estado.error = 'La app todavía no está guardada en el móvil. Ciérrala, vuelve a abrirla y prueba otra vez.'
         return
       }
-      const sub =
-        (await reg.pushManager.getSubscription()) ??
-        (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveAplicacion(CLAVE) }))
+      let sub = await reg.pushManager.getSubscription()
+      // Si las claves del servidor han cambiado, el permiso viejo no vale: se tira
+      // y se pide otro. Si no, los envíos los rechazaría el servicio de avisos.
+      if (sub && !mismaClave(sub.options.applicationServerKey, CLAVE)) {
+        await data.removePushSubscription(sub.endpoint).catch(() => {})
+        await sub.unsubscribe().catch(() => {})
+        sub = null
+      }
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveAplicacion(CLAVE) })
+      }
       const claves = sub.toJSON().keys ?? {}
       if (!claves.p256dh || !claves.auth) {
         estado.error = 'El navegador no ha dado las claves del aviso. Prueba a cerrar la app y volver a entrar.'

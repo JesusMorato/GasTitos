@@ -111,6 +111,7 @@ con la app cerrada. Luego bórralo.
 | En Ajustes dice que hay que añadirla a la pantalla de inicio | Estás en Safari normal. Abre la app desde su icono. |
 | Activas los avisos pero no llega ninguno | Ajustes → Avisos → **"Probar el envío de verdad"**. Te manda un aviso a ti mismo y enseña el motivo exacto si falla. Un **403** casi siempre es el secreto `VAPID_SUBJECT` mal puesto (tiene que ser un `mailto:`). |
 | Llegaban y han dejado de llegar | Si borras la app del iPhone o limpias los datos del navegador, el permiso se pierde. Vuelve a darle a Activar. |
+| Has cambiado las claves VAPID | Los permisos que ya había estaban atados a las claves viejas. La app lo detecta y los renueva al darle a **Activar** otra vez, en cada móvil. |
 | Quieres dejar de recibirlos | Ajustes → Avisos → **Quitar**. Solo afecta a ese aparato. |
 
 ## Seguridad

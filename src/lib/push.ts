@@ -66,3 +66,17 @@ export function nombreAparato(userAgent: string): string {
   if (/Macintosh|Mac OS/i.test(userAgent)) return 'Mac'
   return 'Este navegador'
 }
+
+/**
+ * ¿El permiso guardado en el navegador se pidió con esta misma clave?
+ * Si se cambian las claves del servidor, los permisos viejos dejan de valer y
+ * hay que volver a apuntarse, o los envíos se rechazan.
+ */
+export function mismaClave(usada: ArrayBuffer | null | undefined, claveB64url: string): boolean {
+  if (!usada || !claveB64url) return false
+  const esperada = claveAplicacion(claveB64url)
+  const actual = new Uint8Array(usada)
+  if (actual.length !== esperada.length) return false
+  for (let i = 0; i < actual.length; i++) if (actual[i] !== esperada[i]) return false
+  return true
+}
