@@ -44,19 +44,17 @@ En el terminal, dentro de la carpeta del proyecto:
 node scripts/generar-claves-vapid.mjs
 ```
 
-Escribe dos claves. La **pública** no es secreta (va dentro de la web); la **privada** sí.
+Hace dos cosas solo:
 
-### 2. La clave pública, en el archivo `.env`
+- Escribe la clave **pública** en `.env` (no es secreta: va dentro de la web).
+- Guarda la clave **privada** en `claves-vapid.local`, que está en `.gitignore`.
 
-Abre `.env` y pega la clave en la línea que ya está preparada:
+La privada **no se imprime en pantalla** a propósito, para que no quede en el historial
+del terminal ni en ninguna conversación.
 
-```
-VITE_VAPID_PUBLIC_KEY=aquí-la-clave-pública
-```
+### 2. Las dos claves, en Supabase
 
-Guarda el archivo. Hay que subirlo para que la web publicada la tenga.
-
-### 3. Las dos claves, en Supabase
+Abre el archivo `claves-vapid.local` que acaba de crearse. Lleva los dos valores.
 
 Supabase → tu proyecto → **Edge Functions → Secrets** (o Project Settings → Edge
 Functions → Secrets) → **Add new secret**, dos veces:
@@ -66,14 +64,16 @@ Functions → Secrets) → **Add new secret**, dos veces:
 | `VAPID_PUBLIC_KEY` | la clave pública |
 | `VAPID_PRIVATE_KEY` | la clave privada |
 
-### 4. Permiso para que GitHub publique la función
+Cuando termines, **borra `claves-vapid.local`**.
+
+### 3. Permiso para que GitHub publique la función
 
 - Supabase → tu foto (arriba a la derecha) → **Account settings → Access Tokens** →
   **Generate new token**. Ponle de nombre "GitHub" y copia el token (solo se ve una vez).
 - GitHub → repo GasTitos → **Settings → Secrets and variables → Actions → New repository
   secret**. Name: `SUPABASE_ACCESS_TOKEN`. Secret: el token.
 
-### 5. Subir los cambios
+### 4. Subir los cambios
 
 Al hacer push a `main` se lanzan solos tres automatismos:
 - **Migraciones Supabase** crea la tabla `push_subscriptions`.
@@ -82,7 +82,7 @@ Al hacer push a `main` se lanzan solos tres automatismos:
 
 Comprueba en la pestaña **Actions** que los tres salen en verde.
 
-### 6. En cada iPhone (lo hace cada uno en el suyo)
+### 5. En cada iPhone (lo hace cada uno en el suyo)
 
 1. La app tiene que estar **añadida a la pantalla de inicio**: en Safari, botón de
    compartir → "Añadir a pantalla de inicio". En el iPhone los avisos web solo funcionan
@@ -92,7 +92,7 @@ Comprueba en la pestaña **Actions** que los tres salen en verde.
    notificaciones: di que sí.
 4. Pulsa **"Ver cómo se ve un aviso"** para comprobar que aparecen.
 
-### 7. La prueba de verdad
+### 6. La prueba de verdad
 
 Que uno apunte un gasto repartido de 1 € y que el otro compruebe que le llega el aviso
 con la app cerrada. Luego bórralo.
@@ -105,7 +105,7 @@ con la app cerrada. Luego bórralo.
 |---|---|
 | En Ajustes dice "aún no están configurados" | Falta `VITE_VAPID_PUBLIC_KEY` en `.env`, o la web publicada es anterior a ese cambio. |
 | En Ajustes dice que hay que añadirla a la pantalla de inicio | Estás en Safari normal. Abre la app desde su icono. |
-| Activas los avisos pero no llega ninguno | Supabase → Edge Functions → `notify-partner` → **Logs**: ahí sale qué ha respondido cada envío. Lo más habitual es que falten los secretos del paso 3. |
+| Activas los avisos pero no llega ninguno | Supabase → Edge Functions → `notify-partner` → **Logs**: ahí sale qué ha respondido cada envío. Lo más habitual es que falten los secretos del paso 2. |
 | Llegaban y han dejado de llegar | Si borras la app del iPhone o limpias los datos del navegador, el permiso se pierde. Vuelve a darle a Activar. |
 | Quieres dejar de recibirlos | Ajustes → Avisos → **Quitar**. Solo afecta a ese aparato. |
 

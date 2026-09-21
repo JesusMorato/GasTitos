@@ -102,9 +102,10 @@ allowed" y la app mostrará *"Esta app es privada"*.
 
 Los pasos detallados están en `docs/AVISOS.md`. Resumen de lo que hay que hacer:
 
-- [ ] `node scripts/generar-claves-vapid.mjs` y pegar la clave **pública** en `.env`
-      (línea `VITE_VAPID_PUBLIC_KEY=`).
-- [ ] Supabase → Edge Functions → Secrets: crear `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`.
+- [ ] `node scripts/generar-claves-vapid.mjs`. Pone la clave pública en `.env` y deja la
+      privada en `claves-vapid.local` (que git ignora), sin imprimirla en pantalla.
+- [ ] Supabase → Edge Functions → Secrets: crear `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`
+      con los valores de ese archivo, y luego borrarlo.
 - [ ] Supabase → Account settings → Access Tokens: generar uno y guardarlo en GitHub como
       secret `SUPABASE_ACCESS_TOKEN`.
 - [ ] Subir los cambios y comprobar que los tres workflows salen en verde.

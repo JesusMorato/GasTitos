@@ -5,3 +5,6 @@ dist
 .vscode/*
 !.vscode/extensions.json
 *.tsbuildinfo
+
+# Claves de los avisos: la privada nunca se sube
+claves-vapid.local
