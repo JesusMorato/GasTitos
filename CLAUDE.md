@@ -71,6 +71,21 @@ Ver `docs/MODELO-DATOS.md`. Claves: `households` (1 pareja), `household_members`
 Flags: `is_shared` (de la pareja) e `is_public` (individual pero visible para la
 pareja, solo lectura).
 
+## Avisos en el móvil (Web Push)
+
+Cuando se guarda un gasto **nuevo** repartido o de la cuenta conjunta, `useData` llama a
+`notifyPartner`, que invoca la función `supabase/functions/notify-partner`. Esa función
+busca a la otra persona del hogar y manda el aviso a sus aparatos (`push_subscriptions`);
+`public/sw.js` lo enseña. Los gastos personales y los fijos automáticos no avisan.
+
+El cifrado (RFC 8291) y la firma VAPID (RFC 8292) están hechos a mano con WebCrypto en
+`notify-partner/webpush.ts`, con prueba de ida y vuelta en `webpush.spec.ts`: si tocas ese
+archivo, `npm test` lo comprueba. La lógica de permisos del navegador está en
+`lib/push.ts` (pura, testeada) y el estado en `composables/usePush.ts`.
+
+Publicar la función es un workflow aparte (`.github/workflows/funciones.yml`). La puesta
+en marcha manual (claves y secretos) está en `docs/AVISOS.md`.
+
 ## Documentación
 
 - `docs/README.md` — estado del proyecto y decisiones tomadas.
@@ -78,6 +93,8 @@ pareja, solo lectura).
 - `docs/PLAN.md` — plan de producto v2: estado del arte, modelo, fases y decisiones.
 - `docs/CONFIGURACION-MANUAL.md` — pasos que solo puede hacer el dueño (secrets,
   Pages, usuarios, Google).
+- `docs/PAGOS-DETECTADOS.md` — Apple Pay → Atajos → GasTitos, y cómo montar el atajo.
+- `docs/AVISOS.md` — avisos en el móvil: cómo funcionan y cómo configurarlos.
 
 Al terminar una sesión con cambios relevantes, actualiza `docs/README.md`
 (sección "Estado" y "Pendiente").

@@ -1,0 +1,8 @@
+# Identificador del proyecto de Supabase (es público: sale en la URL de la API).
+# Lo usa la CLI para saber dónde publicar las funciones de supabase/functions/.
+project_id = "jenklrikrwhdxzqjefgu"
+
+[functions.notify-partner]
+# Solo se puede llamar con una sesión válida: Supabase comprueba el token antes
+# de que la función se ejecute.
+verify_jwt = true

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData, type RecurringInput } from '../composables/useData'
 import { useConfirm } from '../composables/useConfirm'
+import { usePush } from '../composables/usePush'
 import type { Category, PaymentKind, RecurringExpense } from '../types'
 import { supabaseAnonKey, supabaseUrl } from '../supabase'
 import { formatDate, formatEur, todayIso } from '../lib/money'
@@ -20,8 +21,12 @@ const router = useRouter()
 const { state, me, partner, nameOf, signOut, renameHousehold, renameMe, setMySplit } = useSession()
 const data = useData()
 const { confirm } = useConfirm()
+const push = usePush()
 
-onMounted(() => data.ensureLoaded(state.user?.id))
+onMounted(() => {
+  data.ensureLoaded(state.user?.id)
+  push.comprobar()
+})
 
 const householdName = ref(state.household?.name ?? '')
 const myName = ref(me.value?.display_name ?? '')
@@ -183,6 +188,16 @@ function cancelDrag() {
   catOrder.value = [...data.categories.value]
 }
 
+// --- avisos en el móvil ---
+async function cambiarAvisos(activar: boolean) {
+  msg.value = null
+  err.value = null
+  if (activar) await push.activar(state.household!.id, state.user!.id)
+  else await push.desactivar()
+  if (push.estado.error) err.value = push.estado.error
+  else msg.value = activar ? 'Avisos activados en este aparato' : 'Avisos quitados de este aparato'
+}
+
 // --- pagos automáticos (atajo del iPhone) ---
 const paymentUrl = `${supabaseUrl}/rest/v1/rpc/register_payment`
 const guideUrl = 'https://github.com/JesusMorato/GasTitos/blob/main/docs/PAGOS-DETECTADOS.md'
@@ -326,6 +341,31 @@ function exportGoals() {
         </div>
         <p class="help">Es el reparto que se propone al apuntar un gasto repartido, y el que se usa para tu parte de la cuenta conjunta en "Mi mes".</p>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Avisos en el móvil</h2>
+      <p class="tiny" style="margin: 0.3rem 0 0.6rem">
+        Cuando tu pareja apunte un gasto <strong>repartido</strong> o de la <strong>cuenta conjunta</strong>, te llega un aviso.
+        Los gastos personales no avisan nunca, y los gastos fijos tampoco (ya los esperas).
+      </p>
+      <template v-if="push.situacion.value.disponible">
+        <div class="row">
+          <span class="grow">{{ push.estado.activo ? 'Activados en este aparato' : 'Desactivados en este aparato' }}</span>
+          <button
+            type="button"
+            class="small"
+            :class="push.estado.activo ? 'secondary' : ''"
+            :disabled="push.estado.ocupado"
+            @click="cambiarAvisos(!push.estado.activo)"
+          >{{ push.estado.ocupado ? 'Un momento…' : push.estado.activo ? 'Quitar' : 'Activar' }}</button>
+        </div>
+        <p class="help">{{ push.situacion.value.texto }}</p>
+        <div v-if="push.estado.activo" class="row" style="margin-top: 0.5rem">
+          <button type="button" class="ghost small" @click="push.probar()">Ver cómo se ve un aviso</button>
+        </div>
+      </template>
+      <p v-else class="help" style="margin-top: 0">{{ push.situacion.value.texto }}</p>
     </div>
 
     <div class="card">

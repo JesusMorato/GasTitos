@@ -97,3 +97,17 @@ allowed" y la app mostrará *"Esta app es privada"*.
 - [x] Probar primero con "Enviar un pago de prueba" y después con un pago real pequeño
       con cada tarjeta.
       Si la otra persona aún no lo ha montado en su iPhone, le vale la misma guía.
+
+## 9. Avisos en el móvil cuando la pareja apunta un gasto
+
+Los pasos detallados están en `docs/AVISOS.md`. Resumen de lo que hay que hacer:
+
+- [ ] `node scripts/generar-claves-vapid.mjs` y pegar la clave **pública** en `.env`
+      (línea `VITE_VAPID_PUBLIC_KEY=`).
+- [ ] Supabase → Edge Functions → Secrets: crear `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`.
+- [ ] Supabase → Account settings → Access Tokens: generar uno y guardarlo en GitHub como
+      secret `SUPABASE_ACCESS_TOKEN`.
+- [ ] Subir los cambios y comprobar que los tres workflows salen en verde.
+- [ ] En cada iPhone: la app añadida a la pantalla de inicio, abrirla desde el icono y
+      Ajustes → Avisos en el móvil → Activar.
+- [ ] Prueba real: uno apunta un gasto repartido de 1 € y el otro comprueba que le llega.

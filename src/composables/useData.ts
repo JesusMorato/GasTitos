@@ -4,7 +4,7 @@ import { computed, ref } from 'vue'
 import { supabase } from '../supabase'
 import type {
   Budget, BudgetScope, Category, Contribution, DetectedPayment, Expense, ExpenseShare, PaymentKind, PaymentSettings,
-  RecurringExpense, RecurringRun, SavingsGoal, Settlement, SplitMode, Funding,
+  PushSubscriptionRow, RecurringExpense, RecurringRun, SavingsGoal, Settlement, SplitMode, Funding,
 } from '../types'
 import { goalBalance, monthOf, todayIso, type Share } from '../lib/money'
 import { isNetworkError, loadSnapshot, online, saveSnapshot } from '../lib/offline'
@@ -320,11 +320,32 @@ export function useData() {
   }
 
   // ---- gastos ------------------------------------------------
-  async function saveExpense(input: ExpenseInput): Promise<string> {
+  /**
+   * Guarda el gasto y, si es nuevo y le toca a la pareja (repartido o de la cuenta
+   * conjunta), le manda un aviso al móvil. El aviso va por detrás: si falla, el
+   * gasto queda guardado igual.
+   */
+  async function guardarGasto(input: ExpenseInput): Promise<string> {
     const { data: id, error: e } = await supabase.rpc('save_expense', { p: input })
     fail(e)
+    const nuevoId = String(id)
+    if (!input.id && input.is_shared) void notifyPartner(nuevoId)
+    return nuevoId
+  }
+
+  async function saveExpense(input: ExpenseInput): Promise<string> {
+    const id = await guardarGasto(input)
     await loadAll()
-    return String(id)
+    return id
+  }
+
+  /** Avisa a la pareja de un gasto repartido o de la cuenta conjunta. */
+  async function notifyPartner(expenseId: string) {
+    try {
+      await supabase.functions.invoke('notify-partner', { body: { expense_id: expenseId } })
+    } catch {
+      // Sin red o función sin publicar: no pasa nada, el gasto ya está guardado.
+    }
   }
 
   async function setExpensePublic(id: string, is_public: boolean) {
@@ -475,9 +496,8 @@ export function useData() {
   }
   /** Apunta el gasto y marca el pago como hecho. */
   async function registerPayment(paymentId: string, input: ExpenseInput) {
-    const { data: id, error: e } = await supabase.rpc('save_expense', { p: input })
-    fail(e)
-    await markPaymentDone(paymentId, String(id))
+    const id = await guardarGasto(input)
+    await markPaymentDone(paymentId, id)
   }
   async function markPaymentDone(paymentId: string, expenseId: string) {
     const { error: e } = await supabase.from('detected_payments').update({ status: 'done', expense_id: expenseId }).eq('id', paymentId)
@@ -529,6 +549,24 @@ export function useData() {
     await loadAll()
   }
 
+  // ---- avisos en el móvil ------------------------------------
+  /** Los aparatos de este usuario donde están puestos los avisos (RLS: solo los suyos). */
+  async function loadPushSubscriptions(): Promise<PushSubscriptionRow[]> {
+    const { data: rows, error: e } = await supabase.from('push_subscriptions').select('*').order('created_at')
+    fail(e)
+    return (rows ?? []) as unknown as PushSubscriptionRow[]
+  }
+
+  async function savePushSubscription(row: Omit<PushSubscriptionRow, 'id' | 'created_at'>) {
+    const { error: e } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' })
+    fail(e)
+  }
+
+  async function removePushSubscription(endpoint: string) {
+    const { error: e } = await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint)
+    fail(e)
+  }
+
   // ---- límites mensuales -------------------------------------
   const potBudget = computed<Budget | null>(() => budgets.value.find((b) => b.scope === 'pot') ?? null)
 
@@ -551,6 +589,7 @@ export function useData() {
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
     loadAll, ensureLoaded, refreshIfStale, refreshPayments, reset,
     saveExpense, setExpensePublic, deleteExpense, reinsertExpense,
+    loadPushSubscriptions, savePushSubscription, removePushSubscription, notifyPartner,
     addCategory, updateCategory, reorderCategories, deleteCategory, moveCategory,
     addSettlement, deleteSettlement,
     addGoal, updateGoal, deleteGoal,

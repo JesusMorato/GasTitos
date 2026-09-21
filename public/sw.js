@@ -1,10 +1,11 @@
-// Service worker de GasTitos: permite abrir la app sin conexión.
+// Service worker de GasTitos: permite abrir la app sin conexión y enseña los
+// avisos que llegan cuando la pareja apunta un gasto repartido o de la conjunta.
 //  - La página (index.html) se pide a la red y, si no hay, se sirve la última copia.
 //  - Los archivos de /assets/ llevan un hash en el nombre (no cambian nunca), así que
 //    se sirven de la caché y solo se descargan la primera vez.
 //  - Las fuentes de Google se sirven de caché y se renuevan por detrás.
 //  - Todo lo demás (Supabase) va directo a la red: los datos los guarda la app aparte.
-const VERSION = 'gastitos-v1'
+const VERSION = 'gastitos-v2'
 const PAGES = `${VERSION}-pages`
 const ASSETS = `${VERSION}-assets`
 const FONTS = `${VERSION}-fonts`
@@ -88,4 +89,45 @@ self.addEventListener('fetch', (event) => {
       }),
     )
   }
+})
+
+// ---------- avisos (Web Push) ----------
+// El aviso lo manda la función notify-partner de Supabase. Aquí solo se enseña.
+self.addEventListener('push', (event) => {
+  let d = {}
+  try {
+    d = event.data ? event.data.json() : {}
+  } catch {
+    d = { cuerpo: event.data ? event.data.text() : '' }
+  }
+  const titulo = d.titulo || 'GasTitos'
+  event.waitUntil(
+    self.registration.showNotification(titulo, {
+      body: d.cuerpo || '',
+      icon: `${SCOPE}icons/icon-192.png`,
+      badge: `${SCOPE}icons/icon-192.png`,
+      // Con etiqueta, un aviso del mismo gasto sustituye al anterior en vez de apilarse.
+      tag: d.etiqueta || 'gastitos',
+      data: { url: `${SCOPE}${d.hash || ''}` },
+    }),
+  )
+})
+
+// Al tocar el aviso: si la app ya está abierta, se trae al frente; si no, se abre.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const destino = (event.notification.data && event.notification.data.url) || SCOPE
+  event.waitUntil(
+    (async () => {
+      const abiertas = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      for (const c of abiertas) {
+        if (c.url.startsWith(SCOPE)) {
+          await c.focus()
+          if ('navigate' in c) await c.navigate(destino).catch(() => {})
+          return
+        }
+      }
+      await self.clients.openWindow(destino)
+    })(),
+  )
 })

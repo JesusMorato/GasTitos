@@ -167,3 +167,15 @@ export interface PaymentSettings {
   card_kinds: Record<string, PaymentKind>
   created_at: string
 }
+
+/** Un aparato (móvil o navegador) donde alguien recibe los avisos de la pareja. */
+export interface PushSubscriptionRow {
+  id: string
+  user_id: string
+  household_id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  aparato: string
+  created_at: string
+}

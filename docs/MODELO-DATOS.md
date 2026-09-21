@@ -209,3 +209,22 @@ usuario, devuelve `repetido` y no inserta (el atajo puede dispararse dos veces).
   del hogar (security definer: solo devuelve el número, nunca las filas).
 - `register_payment` borra además, del mismo usuario, los descartados de más de 90 días y
   los apuntados de más de 365 (estos últimos son la memoria por comercio, por eso duran más).
+
+## Añadido en 0011 (avisos en el móvil)
+
+### push_subscriptions — aparatos donde alguien recibe avisos
+
+| columna | tipo | notas |
+|---|---|---|
+| id, user_id, household_id | | una fila por aparato; una persona puede tener varios |
+| endpoint | text único | dirección que da el navegador para enviarle avisos |
+| p256dh, auth | text | claves públicas del aparato, para cifrar el aviso |
+| aparato | text | "iPhone", "Windows"… solo para que se entienda en Ajustes |
+
+RLS: cada uno ve, crea, cambia y borra **solo los suyos**. Quien lee los de la pareja para
+enviar el aviso es la función `notify-partner`, que usa la clave de servicio (salta RLS) y
+comprueba antes que quien llama pertenece a ese hogar y que el gasto es repartido o de la
+cuenta conjunta.
+
+No hay trigger en la base de datos: el aviso lo dispara la app justo después de guardar el
+gasto. Así los gastos fijos que se crean solos (`run_recurring`) no avisan.

@@ -15,6 +15,29 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-21 · v0.8 — avisos en el móvil cuando la pareja apunta un gasto que te toca.**
+
+- **Qué avisa**: solo los gastos **nuevos** repartidos o de la **cuenta conjunta**. Los
+  personales no (son privados) y los fijos automáticos tampoco (ya se esperan).
+- **Camino**: `useData.guardarGasto` llama a `notifyPartner` tras `save_expense` → función
+  `notify-partner` (Supabase Edge Function) → aparatos de la pareja
+  (`push_subscriptions`) → `push` en `public/sw.js`, que enseña el aviso. Al tocarlo se
+  abre `#/pareja`. Si el aviso falla, el gasto queda guardado igual.
+- **Web Push a mano, sin librerías**: cifrado RFC 8291 (aes128gcm) y firma VAPID RFC 8292
+  con WebCrypto en `supabase/functions/notify-partner/webpush.ts`. Probado de ida y vuelta
+  en `webpush.spec.ts` (se cifra como el servidor y se descifra como el navegador).
+- **Ajustes → "Avisos en el móvil"**: interruptor por aparato, explicación de por qué no
+  se puede cuando toca (falta clave, iPhone sin instalar, permiso bloqueado) y botón para
+  ver cómo se ve un aviso. Reglas puras y testeadas en `lib/push.ts`.
+- **Nuevo automatismo** `.github/workflows/funciones.yml`: publica `supabase/functions/**`
+  con la CLI de Supabase (necesita el secret `SUPABASE_ACCESS_TOKEN`; sin él avisa y sale
+  en verde). El identificador del proyecto se saca de la URL que ya está en `.env`.
+- Migración `0011_avisos_push.sql`. Service worker a `gastitos-v2`.
+- **Pendiente de configurar** (ver `docs/AVISOS.md`): generar las claves con
+  `node scripts/generar-claves-vapid.mjs`, pegar la pública en `.env`, crear los secretos
+  `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY` en Supabase y `SUPABASE_ACCESS_TOKEN` en
+  GitHub. Hasta entonces el interruptor sale como "aún no configurado" y nada se rompe.
+
 **2026-09-20 · v0.7.1 — mejoras pequeñas: deshacer, editar movimientos, compartir CSV, avisos de hucha y pagos de la pareja.**
 
 - **Deshacer**: al borrar un gasto, un movimiento de hucha o descartar un pago detectado,
@@ -269,6 +292,11 @@ se creó el 2026-09-15.
 
 El plan completo por fases está en `PLAN.md`. Revisado el 2026-09-20: todo lo pedido está
 hecho y publicado. Lo que sigue son evolutivos abiertos, ninguno comprometido.
+
+### Requieren que el dueño haga algo
+
+- **Terminar de configurar los avisos**: los cuatro pasos de `docs/AVISOS.md`. El código
+  está hecho y publicado; falta solo la configuración manual.
 
 ### Requieren una decisión del dueño
 
