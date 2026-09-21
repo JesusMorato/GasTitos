@@ -63,6 +63,10 @@ Functions → Secrets) → **Add new secret**, dos veces:
 |---|---|
 | `VAPID_PUBLIC_KEY` | la clave pública |
 | `VAPID_PRIVATE_KEY` | la clave privada |
+| `VAPID_SUBJECT` | `mailto:` y tu correo, por ejemplo `mailto:yo@ejemplo.com` |
+
+El tercero es el remitente. Apple es tiquismiquis con esto: si no es un `mailto:`
+válido, rechaza los envíos con un error 403 y los avisos no llegan nunca.
 
 Cuando termines, **borra `claves-vapid.local`**.
 
@@ -105,7 +109,7 @@ con la app cerrada. Luego bórralo.
 |---|---|
 | En Ajustes dice "aún no están configurados" | Falta `VITE_VAPID_PUBLIC_KEY` en `.env`, o la web publicada es anterior a ese cambio. |
 | En Ajustes dice que hay que añadirla a la pantalla de inicio | Estás en Safari normal. Abre la app desde su icono. |
-| Activas los avisos pero no llega ninguno | Supabase → Edge Functions → `notify-partner` → **Logs**: ahí sale qué ha respondido cada envío. Lo más habitual es que falten los secretos del paso 2. |
+| Activas los avisos pero no llega ninguno | Ajustes → Avisos → **"Probar el envío de verdad"**. Te manda un aviso a ti mismo y enseña el motivo exacto si falla. Un **403** casi siempre es el secreto `VAPID_SUBJECT` mal puesto (tiene que ser un `mailto:`). |
 | Llegaban y han dejado de llegar | Si borras la app del iPhone o limpias los datos del navegador, el permiso se pierde. Vuelve a darle a Activar. |
 | Quieres dejar de recibirlos | Ajustes → Avisos → **Quitar**. Solo afecta a ese aparato. |
 

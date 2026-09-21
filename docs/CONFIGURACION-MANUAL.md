@@ -106,6 +106,8 @@ Los pasos detallados están en `docs/AVISOS.md`. Resumen de lo que hay que hacer
       privada en `claves-vapid.local` (que git ignora), sin imprimirla en pantalla.
 - [ ] Supabase → Edge Functions → Secrets: crear `VAPID_PUBLIC_KEY` y `VAPID_PRIVATE_KEY`
       con los valores de ese archivo, y luego borrarlo.
+- [ ] Mismo sitio: crear `VAPID_SUBJECT` con `mailto:tucorreo`. Sin esto Apple rechaza
+      los envíos con un 403.
 - [ ] Supabase → Account settings → Access Tokens: generar uno y guardarlo en GitHub como
       secret `SUPABASE_ACCESS_TOKEN`.
 - [ ] Subir los cambios y comprobar que los tres workflows salen en verde.

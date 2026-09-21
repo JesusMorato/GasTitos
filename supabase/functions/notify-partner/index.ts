@@ -6,6 +6,10 @@
 // Quien llama va identificado por su sesión (Supabase comprueba el token antes
 // de llegar aquí), así que solo se puede avisar de gastos del propio hogar.
 //
+// Con { prueba: true } no avisa a nadie más: se manda el aviso a los aparatos de
+// quien llama y devuelve qué ha contestado el servicio de avisos. Sirve para ver
+// desde Ajustes por qué no llegan, sin mirar los registros de Supabase.
+//
 // El envío es Web Push estándar, hecho a mano con WebCrypto para no depender de
 // ninguna librería (ver webpush.ts, que además está probado con Vitest).
 // ============================================================
@@ -15,12 +19,22 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
 const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
+// Apple es estricta con esto: acepta mejor un "mailto:" que una dirección https.
+// Se pone en los secretos de Supabase como VAPID_SUBJECT.
 const VAPID_SUBJECT = Deno.env.get('VAPID_SUBJECT') ?? 'https://jesusmorato.github.io/GasTitos/'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+interface Suscripcion {
+  id: string
+  endpoint: string
+  p256dh: string
+  auth: string
+  aparato: string
 }
 
 // ---------- consultas a la base de datos (con clave de servicio) ----------
@@ -37,6 +51,51 @@ async function borrarSuscripcion(id: string): Promise<void> {
     method: 'DELETE',
     headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` },
   })
+}
+
+function suscripcionesDe(userId: string) {
+  return consultar<Suscripcion>(
+    `push_subscriptions?user_id=eq.${userId}&select=id,endpoint,p256dh,auth,aparato`,
+  )
+}
+
+// ---------- envío ----------
+interface Resultado {
+  aparato: string
+  servicio: string
+  codigo: number
+  detalle: string
+}
+
+async function enviar(s: Suscripcion, mensaje: string): Promise<Resultado> {
+  const servicio = new URL(s.endpoint).hostname
+  try {
+    const res = await fetch(s.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Encoding': 'aes128gcm',
+        'Content-Type': 'application/octet-stream',
+        TTL: '86400',
+        Urgency: 'normal',
+        Authorization: await cabeceraVapid({
+          endpoint: s.endpoint,
+          clavePublica: VAPID_PUBLIC,
+          clavePrivada: VAPID_PRIVATE,
+          sujeto: VAPID_SUBJECT,
+        }),
+      },
+      body: await cifrar(s.p256dh, s.auth, mensaje),
+    })
+    const detalle = res.ok ? '' : (await res.text()).slice(0, 300)
+    if (!res.ok) console.error('push', servicio, res.status, detalle)
+    // El aparato ya no existe: se quita para no reintentar siempre.
+    if (res.status === 404 || res.status === 410) await borrarSuscripcion(s.id)
+    return { aparato: s.aparato, servicio, codigo: res.status, detalle }
+  } catch (e) {
+    const detalle = (e as Error).message
+    console.error('push', servicio, detalle)
+    return { aparato: s.aparato, servicio, codigo: 0, detalle }
+  }
 }
 
 // ---------- quién llama ----------
@@ -74,17 +133,38 @@ Deno.serve(async (req) => {
     new Response(JSON.stringify(cuerpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
   try {
-    if (!VAPID_PUBLIC || !VAPID_PRIVATE) return json({ estado: 'sin-configurar' })
-
     const quien = usuarioDelToken(req.headers.get('Authorization'))
     if (!quien) return json({ error: 'Sin sesión' }, 401)
 
-    const { expense_id } = await req.json().catch(() => ({ expense_id: null }))
-    if (typeof expense_id !== 'string' || !expense_id) return json({ error: 'Falta expense_id' }, 400)
+    const peticion = await req.json().catch(() => ({})) as { expense_id?: unknown; prueba?: unknown }
+    const claves = Boolean(VAPID_PUBLIC && VAPID_PRIVATE)
+
+    // ---------- prueba: me aviso a mí mismo y cuento qué ha pasado ----------
+    if (peticion.prueba === true) {
+      const mias = await suscripcionesDe(quien)
+      if (!claves || mias.length === 0) {
+        return json({ estado: 'prueba', claves, sujeto: VAPID_SUBJECT, aparatos: mias.length, resultados: [] })
+      }
+      const mensaje = JSON.stringify({
+        titulo: 'Prueba de envío',
+        cuerpo: 'Si ves esto, los avisos llegan bien.',
+        etiqueta: 'gastitos-prueba-envio',
+        hash: '#/ajustes',
+      })
+      const resultados = []
+      for (const s of mias) resultados.push(await enviar(s, mensaje))
+      return json({ estado: 'prueba', claves, sujeto: VAPID_SUBJECT, aparatos: mias.length, resultados })
+    }
+
+    // ---------- aviso de verdad a la pareja ----------
+    if (!claves) return json({ estado: 'sin-configurar' })
+
+    const expenseId = peticion.expense_id
+    if (typeof expenseId !== 'string' || !expenseId) return json({ error: 'Falta expense_id' }, 400)
 
     // 1 · el gasto
     const gastos = await consultar<Gasto>(
-      `expenses?id=eq.${expense_id}&select=id,household_id,user_id,amount,description,category_id,is_shared,funding`,
+      `expenses?id=eq.${expenseId}&select=id,household_id,user_id,amount,description,category_id,is_shared,funding`,
     )
     const gasto = gastos[0]
     if (!gasto) return json({ error: 'Gasto no encontrado' }, 404)
@@ -121,48 +201,14 @@ Deno.serve(async (req) => {
     }
 
     // 4 · a todos los aparatos donde la pareja ha dado permiso
-    const suscripciones = await consultar<{ id: string; endpoint: string; p256dh: string; auth: string }>(
-      `push_subscriptions?user_id=eq.${pareja.user_id}&select=id,endpoint,p256dh,auth`,
-    )
+    const suscripciones = await suscripcionesDe(pareja.user_id)
     if (suscripciones.length === 0) return json({ estado: 'pareja-sin-avisos' })
 
     const mensaje = JSON.stringify({ titulo, cuerpo, etiqueta: `gasto-${gasto.id}`, hash: '#/pareja' })
+    const resultados = []
+    for (const s of suscripciones) resultados.push(await enviar(s, mensaje))
 
-    let enviados = 0
-    let caducados = 0
-    for (const s of suscripciones) {
-      try {
-        const res = await fetch(s.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Encoding': 'aes128gcm',
-            'Content-Type': 'application/octet-stream',
-            TTL: '86400',
-            Urgency: 'normal',
-            Authorization: await cabeceraVapid({
-              endpoint: s.endpoint,
-              clavePublica: VAPID_PUBLIC,
-              clavePrivada: VAPID_PRIVATE,
-              sujeto: VAPID_SUBJECT,
-            }),
-          },
-          body: await cifrar(s.p256dh, s.auth, mensaje),
-        })
-        if (res.ok) {
-          enviados++
-        } else if (res.status === 404 || res.status === 410) {
-          // El navegador ya no quiere avisos en ese aparato: se quita.
-          await borrarSuscripcion(s.id)
-          caducados++
-        } else {
-          console.error('push', res.status, await res.text())
-        }
-      } catch (e) {
-        console.error('push', (e as Error).message)
-      }
-    }
-
-    return json({ estado: 'ok', enviados, caducados })
+    return json({ estado: 'ok', enviados: resultados.filter((r) => r.codigo >= 200 && r.codigo < 300).length, resultados })
   } catch (e) {
     console.error((e as Error).message)
     return json({ error: (e as Error).message }, 500)

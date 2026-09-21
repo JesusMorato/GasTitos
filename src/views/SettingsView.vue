@@ -198,6 +198,40 @@ async function cambiarAvisos(activar: boolean) {
   else msg.value = activar ? 'Avisos activados en este aparato' : 'Avisos quitados de este aparato'
 }
 
+// Prueba de verdad: manda un aviso a mis propios aparatos por el mismo camino
+// que usa el aviso a la pareja, y cuenta qué ha contestado el servicio.
+const probandoEnvio = ref(false)
+async function probarEnvio() {
+  msg.value = null
+  err.value = null
+  probandoEnvio.value = true
+  try {
+    const r = await data.testPushDelivery()
+    if (r.error) {
+      err.value = `La función ha respondido: ${r.error}`
+    } else if (r.claves === false) {
+      err.value = 'Faltan los secretos VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY en Supabase → Edge Functions → Secrets.'
+    } else if (!r.aparatos) {
+      err.value = 'Este aparato no está apuntado todavía. Pulsa Activar y vuelve a probar.'
+    } else {
+      const lista = r.resultados ?? []
+      const bien = lista.filter((x) => x.codigo >= 200 && x.codigo < 300)
+      if (bien.length > 0) {
+        msg.value = `Enviado a ${bien.length} ${bien.length === 1 ? 'aparato' : 'aparatos'}. El aviso debería llegarte en unos segundos.`
+      } else {
+        const p = lista[0]
+        err.value = p
+          ? `${p.servicio} ha rechazado el envío (código ${p.codigo}). ${p.detalle || ''} · Remitente usado: ${r.sujeto ?? '—'}`.trim()
+          : 'No se ha podido enviar a ningún aparato.'
+      }
+    }
+  } catch (e) {
+    err.value = (e as Error).message
+  } finally {
+    probandoEnvio.value = false
+  }
+}
+
 // --- pagos automáticos (atajo del iPhone) ---
 const paymentUrl = `${supabaseUrl}/rest/v1/rpc/register_payment`
 const guideUrl = 'https://github.com/JesusMorato/GasTitos/blob/main/docs/PAGOS-DETECTADOS.md'
@@ -362,8 +396,15 @@ function exportGoals() {
         </div>
         <p class="help">{{ push.situacion.value.texto }}</p>
         <div v-if="push.estado.activo" class="row" style="margin-top: 0.5rem">
-          <button type="button" class="ghost small" @click="push.probar()">Ver cómo se ve un aviso</button>
+          <button type="button" class="secondary small" :disabled="probandoEnvio" @click="probarEnvio">
+            {{ probandoEnvio ? 'Enviando…' : 'Probar el envío de verdad' }}
+          </button>
+          <button type="button" class="ghost small" @click="push.probar()">Ver cómo se ve</button>
         </div>
+        <p v-if="push.estado.activo" class="help">
+          "Probar el envío de verdad" te manda un aviso a ti mismo por el mismo camino que usa el aviso a tu pareja.
+          Si algo falla, aquí arriba sale el motivo exacto.
+        </p>
       </template>
       <p v-else class="help" style="margin-top: 0">{{ push.situacion.value.texto }}</p>
     </div>

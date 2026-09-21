@@ -339,6 +339,20 @@ export function useData() {
     return id
   }
 
+  /** Resultado de probar el envío de avisos a mis propios aparatos. */
+  async function testPushDelivery(): Promise<{
+    estado?: string
+    claves?: boolean
+    sujeto?: string
+    aparatos?: number
+    resultados?: Array<{ aparato: string; servicio: string; codigo: number; detalle: string }>
+    error?: string
+  }> {
+    const { data: r, error: e } = await supabase.functions.invoke('notify-partner', { body: { prueba: true } })
+    if (e) throw new Error(e.message)
+    return (r ?? {}) as Record<string, never>
+  }
+
   /** Avisa a la pareja de un gasto repartido o de la cuenta conjunta. */
   async function notifyPartner(expenseId: string) {
     try {
@@ -589,7 +603,7 @@ export function useData() {
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
     loadAll, ensureLoaded, refreshIfStale, refreshPayments, reset,
     saveExpense, setExpensePublic, deleteExpense, reinsertExpense,
-    loadPushSubscriptions, savePushSubscription, removePushSubscription, notifyPartner,
+    loadPushSubscriptions, savePushSubscription, removePushSubscription, notifyPartner, testPushDelivery,
     addCategory, updateCategory, reorderCategories, deleteCategory, moveCategory,
     addSettlement, deleteSettlement,
     addGoal, updateGoal, deleteGoal,
