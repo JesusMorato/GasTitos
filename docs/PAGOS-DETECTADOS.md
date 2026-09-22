@@ -167,6 +167,80 @@ apunta de un toque. Como llega con la tarjeta `Internet`, en Ajustes → Pagos a
 puedes decidir qué tipo se propone para ella (Personal, Repartido o Conjunta), y a partir
 del segundo pago de la misma tienda se apunta directo con su categoría.
 
+## Automático también por internet: desde la notificación del banco
+
+Las compras online no disparan "Transacción", pero el banco sí manda una **notificación**
+("Compra de 23,45 € en AMAZON…"). Desde iOS 26, Atajos tiene el disparador **"Al recibir
+una notificación"** de una app concreta, y se puede leer el texto de esa notificación.
+Con eso el pago entra solo, sin tocar nada, por el mismo camino (`register_payment`).
+
+### Antes de empezar
+
+- Bankinter tiene que tener las notificaciones de compras activadas (en la app del banco).
+- Copia el texto de una notificación real de compra (mantén pulsada la notificación →
+  copiar, o hazle una captura). Hace falta para dos cosas: saber qué palabra filtrar y
+  comprobar que la expresión que saca el importe funciona con su formato.
+
+### Montarlo
+
+1. Atajos → **Automatización** → **+** → **Al recibir una notificación** → app **Bankinter**.
+2. **Filtro**: `Título contiene` (o `Contenido contiene`) la palabra que lleve siempre la
+   notificación de compra (por ejemplo `Compra`). Así no saltan las de "ingreso recibido",
+   "recibo" o publicidad. Déjalo en **Ejecutar inmediatamente**.
+3. **Nuevo atajo en blanco**. La notificación llega en una pastilla (**Notificación**), con
+   las propiedades **Título** y **Contenido**.
+4. Añade **"Buscar coincidencias con expresión regular"** (en inglés *Match Text*) sobre
+   **Notificación → Contenido** con este patrón, que pilla `23,45 €`, `23.45 EUR`, `1.234,56 €`:
+
+   ```
+   (\d{1,3}(?:\.\d{3})*,\d{2}|\d+[.,]\d{2})\s?(?:€|EUR)
+   ```
+
+5. Añade **"Obtener grupo de la coincidencia"**: grupo **1** → es el importe como texto
+   (`23,45`). Añade **"Reemplazar texto"**: buscar `,` reemplazar por `.` (la función
+   quiere `23.45`). Si el importe sale como `1.234,56`, añade antes otro reemplazo de `.`
+   por nada.
+6. Añade otra **"Buscar coincidencias con expresión regular"** sobre el Contenido para la
+   tienda. Lo habitual es que vaya detrás de " en ":
+
+   ```
+   \ben\s+(.+?)(?:\s+(?:el|con|a las)\b|[.,]|$)
+   ```
+
+   y **"Obtener grupo de la coincidencia"** grupo **1**. Si la notificación no lleva la
+   tienda, usa el **Título** entero o escribe `Compra online`.
+7. Añade **"Obtener contenido de URL"** exactamente como en el atajo de Apple Pay
+   (POST, cabeceras `apikey` y `Content-Type`, cuerpo JSON) con:
+
+   | Clave | Valor |
+   |---|---|
+   | `p_token` | tu código secreto |
+   | `p_amount` | el importe ya con punto (paso 5) |
+   | `p_merchant` | la tienda (paso 6) |
+   | `p_card` | `Bankinter online` escrito tal cual |
+
+8. **Listo**. Prueba pagando algo pequeño por internet.
+
+### Ojo con los repetidos
+
+Si dejas activas a la vez la automatización **Transacción** con Bankinter y esta de
+notificación, un pago **físico** con Apple Pay entrará dos veces (los dos disparadores
+saltan). GasTitos ignora un segundo pago con el mismo importe y el mismo nombre de tienda
+en dos minutos, pero el banco y Apple Pay no siempre escriben la tienda igual. Dos salidas:
+
+- **Recomendada**: para Bankinter, quita esa tarjeta de la automatización "Transacción" y
+  deja solo la de notificación, que cubre físico y online. Revolut sigue con "Transacción".
+- O afina el filtro del paso 2 para que solo salte con las compras por internet, si
+  Bankinter las distingue en el texto (por ejemplo "Compra por internet").
+
+Con `p_card` = `Bankinter online`, en Ajustes → Pagos automáticos puedes fijar qué tipo se
+propone para esos pagos, igual que con cualquier otra tarjeta.
+
+### Si no sale el disparador
+
+"Al recibir una notificación" necesita **iOS 26**. Con iOS 17 o 18 no existe: ahí queda el
+atajo manual de arriba.
+
 ## Seguridad
 
 - El código secreto es lo único que identifica al usuario. Solo sirve para **añadir** pagos

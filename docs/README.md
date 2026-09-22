@@ -64,6 +64,11 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 **2026-09-18 · v0.7 — pagos detectados desde el iPhone (Apple Pay → Atajos → GasTitos).**
 
+- 2026-09-22: guía para captar también las compras **online** desde la **notificación de
+  Bankinter** (disparador "Al recibir una notificación", iOS 26): saca importe y tienda del
+  texto con expresiones regulares y manda el pago a `register_payment` con la tarjeta
+  `Bankinter online`. Nada nuevo en el servidor. Ver `docs/PAGOS-DETECTADOS.md`.
+
 - **Cómo funciona**: la automatización "Transacción" de Atajos salta al pagar con Apple Pay
   y manda importe, comercio y tarjeta a la función pública `register_payment` (con la clave
   anon; el usuario se identifica por su **código secreto**). El pago queda en
