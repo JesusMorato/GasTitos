@@ -43,6 +43,9 @@ Marca cada punto cuando lo termines.
 
 ## 5. Login con Google (opcional, para practicar)
 
+No hay que tocar código: en cuanto actives Google en Supabase, el botón
+"Entrar con Google" aparece solo en la pantalla de entrada (recarga la página).
+
 Idea general: Google te da un "ID de cliente" y un "secreto"; se los das a Supabase;
 Supabase le dice a Google a qué dirección devolver al usuario.
 
@@ -69,7 +72,7 @@ Supabase le dice a Google a qué dirección devolver al usuario.
 **Importante:** el email de Google tiene que ser exactamente el mismo con el que
 creaste la cuenta en el punto 4. Supabase enlaza ambas formas de entrar por el email
 verificado. Si es distinto, con el registro cerrado Google dirá "Signups not
-allowed" y la app mostrará *"Esta app es privada"*.
+allowed" y la app mostrará *"Esta app es privada: tu cuenta no está dada de alta"*.
 
 ## 6. Primera prueba ✅ (la app se usa a diario desde 2026-09-16)
 

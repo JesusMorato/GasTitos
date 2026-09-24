@@ -1,22 +1,32 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase, authRedirectUrl } from '../supabase'
+import { supabase, supabaseUrl, supabaseAnonKey, authRedirectUrl, oauthError } from '../supabase'
+import { googleEnabled } from '../lib/authError'
 import { useSession, whenSessionSettled } from '../composables/useSession'
 import Logo from '../components/Logo.vue'
 
-// Se activa cuando el login con Google esté configurado en Supabase
-// (ver docs/CONFIGURACION-MANUAL.md, punto 5).
-const GOOGLE_LOGIN = false
+// El botón de Google sale solo si está activado en Supabase
+// (ver docs/CONFIGURACION-MANUAL.md, punto 5). Se pregunta al cargar la pantalla.
+const googleLogin = ref(false)
 
 const router = useRouter()
 const { requestPasswordReset } = useSession()
 const email = ref('')
 const password = ref('')
 const busy = ref(false)
-const error = ref<string | null>(null)
+const error = ref<string | null>(oauthError ? translate(oauthError) : null)
 const forgot = ref(false)
 const sent = ref(false)
+
+onMounted(async () => {
+  try {
+    const res = await fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: supabaseAnonKey } })
+    googleLogin.value = res.ok && googleEnabled(await res.json())
+  } catch {
+    // Sin conexión: se queda solo el login con email.
+  }
+})
 
 async function sendReset() {
   error.value = null
@@ -97,7 +107,7 @@ async function loginGoogle() {
       <p v-else class="ok">Enlace enviado. Revisa el correo (y la carpeta de spam).</p>
     </div>
 
-    <template v-if="GOOGLE_LOGIN">
+    <template v-if="googleLogin">
       <div class="row" style="margin: 1rem 0; justify-content: center"><span class="tiny">o</span></div>
       <button type="button" class="secondary block" :disabled="busy" @click="loginGoogle">Entrar con Google</button>
     </template>

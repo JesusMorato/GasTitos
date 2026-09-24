@@ -221,7 +221,7 @@ de cada importe.
 - **Identidad**: logo B (hucha) como icono de la app, favicon y marca; manifest para
   instalar en el móvil (`public/`, `scripts/make-icons.mjs`). Iconos de trazo en toda
   la interfaz (`lib/uiIcons.ts`, `components/UiIcon.vue`); sin emojis salvo los que
-  elige el usuario. Google oculto hasta configurarlo (`GOOGLE_LOGIN` en LoginView).
+  elige el usuario. El botón de Google sale solo cuando está activado en Supabase.
 
 **2026-09-16 · v0.3 — fase 3: gráficas y límite mensual.**
 
@@ -310,9 +310,10 @@ hecho y publicado. Lo que sigue son evolutivos abiertos, ninguno comprometido.
 
 - **Ingresos y tasa de ahorro** (fase 7 del plan): registrar ingresos privados para
   calcular "podrías ahorrar X". Es la única fase del plan sin hacer y sigue sin decidirse.
-- **Login con Google**: el código está listo y oculto (`GOOGLE_LOGIN = false` en
-  `LoginView.vue`); solo falta la configuración manual del punto 5 de
-  `CONFIGURACION-MANUAL.md`. Opcional.
+- **Login con Google**: el código está publicado. El botón "Entrar con Google" aparece
+  solo en cuanto Google se activa en Supabase (la app lo pregunta al abrir la pantalla
+  de entrada), sin tocar código. Falta la configuración manual del punto 5 de
+  `CONFIGURACION-MANUAL.md`.
 
 ### Mejoras pequeñas, a demanda
 
