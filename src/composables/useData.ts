@@ -560,7 +560,7 @@ export function useData() {
     const amount = `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, '0')} €`
     const { data: result, error: e } = await supabase.rpc('register_payment', { p_token: token, p_amount: amount, p_merchant: 'Pago de prueba', p_card: 'Prueba' })
     fail(e)
-    if (result === 'repetido') throw new Error('Se ha ignorado por repetido: mismo importe y comercio que otro pago de hace menos de dos minutos.')
+    if (result === 'repetido') throw new Error('Se ha ignorado por repetido: mismo importe y comercio que otro pago de prueba de hace menos de dos minutos.')
     await loadAll()
   }
 

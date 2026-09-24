@@ -15,6 +15,18 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-09-24 · v0.8.1 — avisos del banco sin duplicados con Apple Pay; botón de Google automático.**
+
+- **Pagos detectados**: `register_payment` junta el mismo pago que llega por dos caminos
+  (Apple Pay "Transacción", aviso del banco, atajo manual): mismo importe, otra `p_card`,
+  en 10 minutos → `repetido`, aunque la tienda venga escrita distinto. Por el mismo camino
+  sigue la regla de antes (misma tienda, 2 minutos). Los de prueba (`Prueba`) no se cruzan.
+  Probado en un Postgres local. Migración `0012_pagos_sin_duplicados.sql`. La guía de
+  notificaciones vale para cualquier banco (`p_card` = `<Banco> aviso`); ya no hace falta
+  quitar la tarjeta de "Transacción".
+- **Login con Google**: el botón sale solo si Supabase tiene Google activado
+  (`/auth/v1/settings`); los errores de vuelta de Google se muestran traducidos.
+
 **2026-09-21 · v0.8 — avisos en el móvil cuando la pareja apunta un gasto que te toca. ✅ funcionando en los dos iPhone.**
 
 - **Qué avisa**: solo los gastos **nuevos** repartidos o de la **cuenta conjunta**. Los

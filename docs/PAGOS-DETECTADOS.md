@@ -78,8 +78,8 @@ Consejo: haz esta parte en el propio iPhone, así puedes copiar y pegar en Atajo
 - **Sin gastar dinero:** en GasTitos → Ajustes → **"Enviar un pago de prueba"**. Debe salir
   la bolita en "Yo" y un pago de unos pocos euros llamado "Pago de prueba". Descártalo con
   la ✕. Esto comprueba la parte de GasTitos, no el atajo.
-- Ojo: si en menos de dos minutos llegan dos pagos con el mismo importe y el mismo comercio,
-  el segundo se ignora como repetido (el atajo a veces se dispara dos veces).
+- Ojo: si mandas dos pagos de prueba seguidos (menos de dos minutos), el segundo se ignora
+  como repetido. Espera un poco o descarta el primero.
 - **De verdad:** paga algo pequeño con Apple Pay con cada tarjeta. Al abrir GasTitos
   (o al cabo de un minuto si ya estaba abierta) tiene que aparecer el pago.
 
@@ -170,7 +170,10 @@ del segundo pago de la misma tienda se apunta directo con su categoría.
 ## Automático también por internet: desde la notificación del banco
 
 Las compras online no disparan "Transacción", pero el banco sí manda una **notificación**
-("Compra de 23,45 € en AMAZON…"). Desde iOS 26, Atajos tiene el disparador **"Al recibir
+("Compra de 23,45 € en AMAZON…"). Vale para **cualquier banco** que avise de las compras
+(Bankinter, Revolut…): se monta una automatización por cada app de banco. Abajo va el
+ejemplo de Bankinter; para otro banco cambia la app del paso 1, la palabra del filtro y
+el nombre del paso 7 (por ejemplo `Revolut aviso`). Desde iOS 26, Atajos tiene el disparador **"Al recibir
 una notificación"** de una app concreta, y se puede leer el texto de esa notificación.
 Con eso el pago entra solo, sin tocar nada, por el mismo camino (`register_payment`).
 
@@ -217,24 +220,33 @@ Con eso el pago entra solo, sin tocar nada, por el mismo camino (`register_payme
    | `p_token` | tu código secreto |
    | `p_amount` | el importe ya con punto (paso 5) |
    | `p_merchant` | la tienda (paso 6) |
-   | `p_card` | `Bankinter online` escrito tal cual |
+   | `p_card` | `Bankinter aviso` escrito tal cual (con el nombre de tu banco) |
 
 8. **Listo**. Prueba pagando algo pequeño por internet.
 
-### Ojo con los repetidos
+### Sin repetidos con Apple Pay (puedes dejar las dos automatizaciones)
 
-Si dejas activas a la vez la automatización **Transacción** con Bankinter y esta de
-notificación, un pago **físico** con Apple Pay entrará dos veces (los dos disparadores
-saltan). GasTitos ignora un segundo pago con el mismo importe y el mismo nombre de tienda
-en dos minutos, pero el banco y Apple Pay no siempre escriben la tienda igual. Dos salidas:
+Al pagar **con el móvil en una tienda** saltan las dos: "Transacción" (Apple Pay) y la del
+aviso del banco. GasTitos se da cuenta y **solo guarda uno**. La regla (en la base de
+datos, función `register_payment`):
 
-- **Recomendada**: para Bankinter, quita esa tarjeta de la automatización "Transacción" y
-  deja solo la de notificación, que cubre físico y online. Revolut sigue con "Transacción".
-- O afina el filtro del paso 2 para que solo salte con las compras por internet, si
-  Bankinter las distingue en el texto (por ejemplo "Compra por internet").
+- Si llega un pago con **el mismo importe** que otro que llegó **por otro camino** en los
+  **últimos 10 minutos**, es el mismo pago y se ignora, **aunque la tienda venga escrita
+  distinto** ("MERCADONA S.A." y "Mercadona"). "Otro camino" = otro valor en `p_card`:
+  `Bankinter` (Apple Pay), `Bankinter aviso` (notificación) e `Internet` (atajo manual)
+  son tres caminos distintos. Por eso es importante que el `p_card` de la notificación
+  lleve la palabra **aviso** y no se llame igual que la tarjeta de la Cartera.
+- Da igual que el primero ya lo hayas apuntado o descartado: el repetido no vuelve a salir.
+- Si el que llegó primero no traía tienda, se queda con la del repetido.
+- Por el mismo camino, dos pagos del mismo importe **solo** se juntan si además son de la
+  misma tienda y en menos de dos minutos (el atajo que se dispara dos veces). Dos cafés
+  iguales pagados seguidos en sitios distintos entran los dos.
+- También sirve si usas el atajo manual "Apuntar gasto" para una compra online y luego
+  llega el aviso del banco: entra una sola vez.
 
-Con `p_card` = `Bankinter online`, en Ajustes → Pagos automáticos puedes fijar qué tipo se
-propone para esos pagos, igual que con cualquier otra tarjeta.
+El único caso raro: dos compras **distintas** del **mismo importe exacto**, con **tarjetas
+distintas**, en menos de 10 minutos. La segunda se tomaría por repetida; apúntala a mano
+con el ➕.
 
 ### Si no sale el disparador
 
