@@ -24,7 +24,7 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
   Probado en un Postgres local. Migración `0012_pagos_sin_duplicados.sql`. La guía de
   notificaciones vale para cualquier banco (`p_card` = `<Banco> aviso`); ya no hace falta
   quitar la tarjeta de "Transacción".
-- **Login con Google**: el botón sale solo si Supabase tiene Google activado
+- **Login con Google** ✅ funcionando: el botón sale solo si Supabase tiene Google activado
   (`/auth/v1/settings`); los errores de vuelta de Google se muestran traducidos.
 
 **2026-09-21 · v0.8 — avisos en el móvil cuando la pareja apunta un gasto que te toca. ✅ funcionando en los dos iPhone.**
@@ -322,10 +322,6 @@ hecho y publicado. Lo que sigue son evolutivos abiertos, ninguno comprometido.
 
 - **Ingresos y tasa de ahorro** (fase 7 del plan): registrar ingresos privados para
   calcular "podrías ahorrar X". Es la única fase del plan sin hacer y sigue sin decidirse.
-- **Login con Google**: el código está publicado. El botón "Entrar con Google" aparece
-  solo en cuanto Google se activa en Supabase (la app lo pregunta al abrir la pantalla
-  de entrada), sin tocar código. Falta la configuración manual del punto 5 de
-  `CONFIGURACION-MANUAL.md`.
 
 ### Mejoras pequeñas, a demanda
 

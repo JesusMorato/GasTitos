@@ -41,7 +41,7 @@ Marca cada punto cuando lo termines.
       - Redirect URLs: añade `https://jesusmorato.github.io/GasTitos/**`
         y, para probar en local, `http://localhost:5173/GasTitos/**`
 
-## 5. Login con Google (opcional, para practicar)
+## 5. Login con Google ✅ (hecho el 2026-09-24)
 
 No hay que tocar código: en cuanto actives Google en Supabase, el botón
 "Entrar con Google" aparece solo en la pantalla de entrada (recarga la página).
@@ -51,23 +51,23 @@ Supabase le dice a Google a qué dirección devolver al usuario.
 
 **En Google Cloud Console** (https://console.cloud.google.com):
 
-- [ ] Crea un proyecto (nombre libre, p. ej. "GasTitos").
-- [ ] Menú **APIs y servicios → Pantalla de consentimiento OAuth**. Tipo *Externo*.
+- [x] Crea un proyecto (nombre libre, p. ej. "GasTitos").
+- [x] Menú **APIs y servicios → Pantalla de consentimiento OAuth**. Tipo *Externo*.
       Nombre de la app "GasTitos", tu email de soporte, y guarda.
-- [ ] En **Público** (o "Test users"): añade los dos emails de la pareja. Mientras
+- [x] En **Público** (o "Test users"): añade los dos emails de la pareja. Mientras
       la app esté en modo "Prueba", solo ellos podrán entrar con Google, que es
       justo lo que queremos.
-- [ ] **APIs y servicios → Credenciales → Crear credenciales → ID de cliente de
+- [x] **APIs y servicios → Credenciales → Crear credenciales → ID de cliente de
       OAuth**. Tipo: *Aplicación web*.
       - Orígenes de JavaScript autorizados: `https://jenklrikrwhdxzqjefgu.supabase.co`
       - URI de redirección autorizados: `https://jenklrikrwhdxzqjefgu.supabase.co/auth/v1/callback`
-- [ ] Copia el **ID de cliente** y el **Secreto de cliente**.
+- [x] Copia el **ID de cliente** y el **Secreto de cliente**.
 
 **En Supabase:**
 
-- [ ] **Authentication → Sign In / Providers → Google**: actívalo y pega ID y secreto.
+- [x] **Authentication → Sign In / Providers → Google**: actívalo y pega ID y secreto.
       Guarda.
-- [ ] Comprueba que en **URL Configuration** están las redirect URLs del punto 4.
+- [x] Comprueba que en **URL Configuration** están las redirect URLs del punto 4.
 
 **Importante:** el email de Google tiene que ser exactamente el mismo con el que
 creaste la cuenta en el punto 4. Supabase enlaza ambas formas de entrar por el email
