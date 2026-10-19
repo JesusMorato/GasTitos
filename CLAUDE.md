@@ -104,6 +104,7 @@ push). Nuevos formatos de banco = nuevo caso en `statement.spec.ts`.
 - `docs/CONFIGURACION-MANUAL.md` — pasos que solo puede hacer el dueño (secrets,
   Pages, usuarios, Google).
 - `docs/PAGOS-DETECTADOS.md` — Apple Pay → Atajos → GasTitos, y cómo montar el atajo.
+- `docs/PAGOS-ANDROID.md` — lo mismo en Android: notificación del banco → MacroDroid/Tasker → GasTitos.
 - `docs/AVISOS.md` — avisos en el móvil: cómo funcionan y cómo configurarlos.
 
 Al terminar una sesión con cambios relevantes, actualiza `docs/README.md`

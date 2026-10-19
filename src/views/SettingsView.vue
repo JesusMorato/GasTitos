@@ -261,6 +261,7 @@ async function probarEnvio() {
 // --- pagos automáticos (atajo del iPhone) ---
 const paymentUrl = `${supabaseUrl}/rest/v1/rpc/register_payment`
 const guideUrl = 'https://github.com/JesusMorato/GasTitos/blob/main/docs/PAGOS-DETECTADOS.md'
+const guideUrlAndroid = 'https://github.com/JesusMorato/GasTitos/blob/main/docs/PAGOS-ANDROID.md'
 const kindLabels: Record<PaymentKind, string> = { personal: 'Personal', shared: 'Repartido', pot: 'Conjunta' }
 async function copy(text: string, what: string) {
   try {
@@ -272,12 +273,12 @@ async function copy(text: string, what: string) {
   }
 }
 function activatePayments() {
-  run(() => data.ensurePaymentToken(state.household!.id, state.user!.id), 'Código creado. Ahora sigue la guía para montar el atajo.')
+  run(() => data.ensurePaymentToken(state.household!.id, state.user!.id), 'Código creado. Ahora sigue la guía de tu móvil para montar la automatización.')
 }
 async function renewToken() {
   const ok = await confirm({
     title: 'Nuevo código',
-    message: 'El código de ahora dejará de valer y tendrás que cambiarlo en el atajo del iPhone.',
+    message: 'El código de ahora dejará de valer y tendrás que cambiarlo en la automatización de tu móvil.',
     confirmLabel: 'Generar otro',
     danger: true,
   })
@@ -488,24 +489,25 @@ function exportGoals() {
     </div>
 
     <div class="card">
-      <h2>Pagos automáticos (iPhone)</h2>
+      <h2>Pagos automáticos (móvil)</h2>
       <p class="tiny" style="margin: 0.3rem 0 0.6rem">
-        Al pagar con el móvil (Apple Pay), un atajo del iPhone avisa a GasTitos y el pago aparece en "Yo" para apuntarlo de un toque.
-        <a :href="guideUrl" target="_blank" rel="noopener">Guía paso a paso</a>.
+        Al pagar, el móvil avisa a GasTitos y el pago aparece en "Yo" para apuntarlo de un toque. En iPhone va con un atajo (Apple Pay);
+        en Android, leyendo la notificación del banco.
+        Guías paso a paso: <a :href="guideUrl" target="_blank" rel="noopener">iPhone</a> · <a :href="guideUrlAndroid" target="_blank" rel="noopener">Android</a>.
       </p>
       <template v-if="!data.paymentSettings.value">
         <button type="button" class="small" @click="activatePayments">Activar: crear mi código</button>
       </template>
       <template v-else>
         <div class="field">
-          <label>Tu código secreto (solo para tu atajo)</label>
+          <label>Tu código secreto (solo para tu automatización)</label>
           <div class="row">
             <code class="grow secret">{{ data.paymentSettings.value.token }}</code>
             <button type="button" class="icon" title="Copiar código" aria-label="Copiar código" @click="copy(data.paymentSettings.value!.token, 'Código')"><UiIcon name="copy" :size="18" /></button>
           </div>
         </div>
         <div class="field">
-          <label>Dirección a la que manda el atajo</label>
+          <label>Dirección a la que se manda el pago</label>
           <div class="row">
             <code class="grow secret">{{ paymentUrl }}</code>
             <button type="button" class="icon" title="Copiar dirección" aria-label="Copiar dirección" @click="copy(paymentUrl, 'Dirección')"><UiIcon name="copy" :size="18" /></button>

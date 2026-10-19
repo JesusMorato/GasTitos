@@ -42,6 +42,10 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
   enseña el error. Sin conexión no se puede importar.
 - Prueba de humo de la pantalla en `views/ImportView.spec.ts` (primer test de un componente
   con `@vue/test-utils`). Sin cambios en la base de datos.
+- **Guía para Android** (`docs/PAGOS-ANDROID.md`): pagos automáticos leyendo la notificación
+  del banco o de Google Wallet con MacroDroid (paso a paso) o Tasker (versión corta). Mismo
+  `register_payment`; cada app con su `p_card` ("Bankinter aviso", "Wallet") para que no
+  haya repetidos. La tarjeta de Ajustes pasa a "Pagos automáticos (móvil)" con las dos guías.
 
 **2026-09-24 · v0.8.1 — avisos del banco sin duplicados con Apple Pay; botón de Google automático.**
 

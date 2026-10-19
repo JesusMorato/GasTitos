@@ -16,6 +16,9 @@ gastos fijos). Para lo primero y lo segundo hay un atajo manual: ver más abajo
 
 Cada persona lo monta en su iPhone con **su propio código**. Son unos 5 minutos.
 
+**¿Android?** La guía está en `PAGOS-ANDROID.md`: mismo destino, pero leyendo la
+notificación del banco con MacroDroid o Tasker.
+
 ---
 
 ## 1. Activar en GasTitos
