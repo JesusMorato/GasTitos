@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSession } from '../composables/useSession'
 import { useData, type ExpenseInput } from '../composables/useData'
@@ -7,6 +7,7 @@ import { useEditor } from '../composables/useEditor'
 import { computeShares, formatDate, formatEur, sum } from '../lib/money'
 import { alreadyRecorded, decodeText, parseDelimited, parseStatement, suggestFromHistory, type StatementItem } from '../lib/statement'
 import { readXlsx } from '../lib/xlsx'
+import { decryptOffice, isEncryptedOffice } from '../lib/officeCrypto'
 import type { PaymentKind } from '../types'
 import UiIcon from '../components/UiIcon.vue'
 
@@ -53,6 +54,10 @@ const skipped = ref(0)
 const reading = ref(false)
 const readError = ref<string | null>(null)
 const saving = ref(false)
+/** Excel con contraseña, a la espera de que el usuario la escriba. */
+const locked = ref<ArrayBuffer | null>(null)
+const password = ref('')
+const passwordInput = ref<HTMLInputElement | null>(null)
 const savedCount = ref(0)
 const saveError = ref<string | null>(null)
 
@@ -69,42 +74,73 @@ async function onFile(ev: Event) {
   readError.value = null
   saveError.value = null
   rows.value = []
+  locked.value = null
+  password.value = ''
   fileName.value = file.name
   reading.value = true
   try {
+    const buf = await file.arrayBuffer()
+    const head = new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(4, buf.byteLength)))
+    if (head.startsWith('%PDF')) {
+      throw new Error('Esto es un PDF y de ahí no se pueden sacar los movimientos. En el banco busca "Exportar" o "Descargar movimientos" en Excel o CSV.')
+    }
+    if (isEncryptedOffice(buf)) {
+      // Excel con contraseña: se pide y se sigue en openLocked.
+      locked.value = buf
+      reading.value = false
+      await nextTick()
+      passwordInput.value?.focus()
+      return
+    }
     const name = file.name.toLowerCase()
-    let table: string[][]
     if (name.endsWith('.xls')) {
       throw new Error('Este Excel es del formato antiguo (.xls). Ábrelo y guárdalo como .xlsx o como CSV, y vuelve a subirlo.')
-    } else if (name.endsWith('.xlsx')) {
-      table = await readXlsx(await file.arrayBuffer())
-    } else {
-      table = parseDelimited(decodeText(await file.arrayBuffer()))
     }
-    const parsed = parseStatement(table)
-    if (!parsed) throw new Error('No he encontrado columnas de fecha e importe. Prueba con el CSV o el Excel que da el banco en "Exportar movimientos".')
-    if (!parsed.items.length) throw new Error(parsed.incomes ? 'En este archivo solo hay ingresos; no hay cargos que apuntar.' : 'No he encontrado ningún cargo en el archivo.')
-    const history = data.expenses.value
-    rows.value = parsed.items.map((item) => {
-      const hint = suggestFromHistory(item.concept, history)
-      const duplicate = alreadyRecorded(item, history)
-      return {
-        item,
-        checked: !duplicate,
-        kind: hint && (hint.kind !== 'shared' || hasPartner.value) ? hint.kind : 'personal',
-        category_id: hint?.category_id ?? '',
-        description: item.concept,
-        duplicate,
-        remembered: !!hint,
-      }
-    })
-    incomes.value = parsed.incomes
-    skipped.value = parsed.skipped
+    await loadTable(head.startsWith('PK') ? await readXlsx(buf) : parseDelimited(decodeText(buf)))
   } catch (e) {
     readError.value = (e as Error).message
   } finally {
     reading.value = false
   }
+}
+
+/** Descifra el Excel con la contraseña escrita y sigue como con uno normal. */
+async function openLocked() {
+  if (!locked.value || !password.value || reading.value) return
+  readError.value = null
+  reading.value = true
+  try {
+    const plain = await decryptOffice(locked.value, password.value)
+    locked.value = null
+    password.value = ''
+    await loadTable(await readXlsx(plain))
+  } catch (e) {
+    readError.value = (e as Error).message
+  } finally {
+    reading.value = false
+  }
+}
+
+async function loadTable(table: string[][]) {
+  const parsed = parseStatement(table)
+  if (!parsed) throw new Error('No he encontrado columnas de fecha e importe. Prueba con el CSV o el Excel que da el banco en "Exportar movimientos".')
+  if (!parsed.items.length) throw new Error(parsed.incomes ? 'En este archivo solo hay ingresos; no hay cargos que apuntar.' : 'No he encontrado ningún cargo en el archivo.')
+  const history = data.expenses.value
+  rows.value = parsed.items.map((item) => {
+    const hint = suggestFromHistory(item.concept, history)
+    const duplicate = alreadyRecorded(item, history)
+    return {
+      item,
+      checked: !duplicate,
+      kind: hint && (hint.kind !== 'shared' || hasPartner.value) ? hint.kind : 'personal',
+      category_id: hint?.category_id ?? '',
+      description: item.concept,
+      duplicate,
+      remembered: !!hint,
+    }
+  })
+  incomes.value = parsed.incomes
+  skipped.value = parsed.skipped
 }
 
 function setAllKind(kind: PaymentKind) {
@@ -163,7 +199,14 @@ async function save() {
         <input type="file" accept=".csv,.txt,.tsv,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" @change="onFile" />
       </label>
       <span v-if="fileName" class="tiny" style="margin-left: 0.5rem">{{ fileName }}</span>
-      <p v-if="reading" class="tiny" style="margin-top: 0.5rem">Leyendo…</p>
+      <form v-if="locked" class="locked" @submit.prevent="openLocked">
+        <p class="tiny" style="margin: 0.6rem 0 0.4rem">Este Excel tiene contraseña (muchos bancos ponen el DNI o la fecha de nacimiento). Escríbela para abrirlo; se queda en tu móvil.</p>
+        <div class="row">
+          <input ref="passwordInput" v-model="password" type="password" class="grow" placeholder="Contraseña del archivo" autocomplete="off" :disabled="reading" />
+          <button type="submit" class="small" :disabled="!password || reading">{{ reading ? 'Abriendo…' : 'Abrir' }}</button>
+        </div>
+      </form>
+      <p v-if="reading && !locked" class="tiny" style="margin-top: 0.5rem">Leyendo…</p>
       <p v-if="readError" class="error" style="margin-top: 0.5rem">{{ readError }}</p>
       <p v-if="data.offline.value" class="error" style="margin-top: 0.5rem">Sin conexión no se pueden apuntar gastos.</p>
     </div>

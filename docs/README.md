@@ -42,6 +42,13 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
   enseña el error. Sin conexión no se puede importar.
 - Prueba de humo de la pantalla en `views/ImportView.spec.ts` (primer test de un componente
   con `@vue/test-utils`). Sin cambios en la base de datos.
+- **Excel con contraseña** (muchos bancos lo mandan así, con el DNI o la fecha de nacimiento):
+  la pantalla lo detecta (contenedor OLE) y pide la contraseña; se descifra en el móvil con
+  WebCrypto (`lib/officeCrypto.ts`: lector OLE mínimo + cifrado "agile" de MS-OFFCRYPTO, el
+  que usa Excel desde 2010; AES-CBC sin relleno con el truco del bloque final). Tarda 2-3 s
+  por las 100.000 vueltas de hash. Probado contra un archivo creado por Excel 2016
+  (`__fixtures__/extractoCifrado.ts`, contraseña 1234). El cifrado antiguo (Office 2007) y
+  los **PDF** no se pueden: la pantalla lo dice y manda a "Exportar movimientos" en Excel/CSV.
 - **Guía para Android** (`docs/PAGOS-ANDROID.md`): pagos automáticos leyendo la notificación
   del banco o de Google Wallet con MacroDroid (paso a paso) o Tasker (versión corta). Mismo
   `register_payment`; cada app con su `p_card` ("Bankinter aviso", "Wallet") para que no

@@ -30,10 +30,11 @@ import ImportView from './ImportView.vue'
 
 const CSV = 'Fecha;Concepto;Importe\n19/10/2026;COMPRA EN MERCADONA;-45,30\n17/10/2026;RECIBO NETFLIX;-12,99\n16/10/2026;NOMINA;1.800,00'
 
-async function upload(wrapper: ReturnType<typeof mount>, text: string) {
+async function upload(wrapper: ReturnType<typeof mount>, text: string, binary = false) {
   const file = new File([text], 'extracto.csv', { type: 'text/csv' })
-  // jsdom no trae File.arrayBuffer: se simula.
-  Object.defineProperty(file, 'arrayBuffer', { value: async () => new TextEncoder().encode(text).buffer })
+  // jsdom no trae File.arrayBuffer: se simula. En binario, cada carácter es un byte.
+  const bytes = binary ? Uint8Array.from(text, (c) => c.charCodeAt(0)) : new TextEncoder().encode(text)
+  Object.defineProperty(file, 'arrayBuffer', { value: async () => bytes.buffer })
   const input = wrapper.find('input[type="file"]')
   Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
   await input.trigger('change')
@@ -88,6 +89,19 @@ describe('ImportView', () => {
     await flushPromises()
     const [input] = importExpenses.mock.calls[0][0] as Array<Record<string, unknown>>
     expect(input).toMatchObject({ is_shared: true, funding: 'personal', paid_by: 'yo', shares: [{ user_id: 'yo', amount: 8 }, { user_id: 'tu', amount: 7.99 }] })
+  })
+
+  it('un PDF se rechaza con explicación', async () => {
+    const wrapper = mount(ImportView)
+    await upload(wrapper, '%PDF-1.7 lo que sea')
+    expect(wrapper.text()).toContain('Esto es un PDF')
+  })
+
+  it('un Excel con contraseña pide la contraseña', async () => {
+    const wrapper = mount(ImportView)
+    await upload(wrapper, 'ÐÏà¡±á resto', true)
+    expect(wrapper.find('input[type="password"]').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Este Excel tiene contraseña')
   })
 
   it('archivo que no se entiende: mensaje y nada que apuntar', async () => {
