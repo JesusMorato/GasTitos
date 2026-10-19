@@ -5,9 +5,10 @@ import { useSession } from '../composables/useSession'
 import { useData, type ExpenseInput } from '../composables/useData'
 import { useEditor } from '../composables/useEditor'
 import { computeShares, formatDate, formatEur, sum } from '../lib/money'
-import { alreadyRecorded, decodeText, parseDelimited, parseStatement, suggestFromHistory, type StatementItem } from '../lib/statement'
+import { alreadyRecorded, decodeText, parseDelimited, parseStatement, suggestFromHistory, type Layout, type StatementItem } from '../lib/statement'
 import { readXlsx } from '../lib/xlsx'
 import { decryptOffice, isEncryptedOffice } from '../lib/officeCrypto'
+import { linesToTable, passwordProblem, pdfToLines, PDF_LAYOUT } from '../lib/pdfStatement'
 import type { PaymentKind } from '../types'
 import UiIcon from '../components/UiIcon.vue'
 
@@ -54,8 +55,8 @@ const skipped = ref(0)
 const reading = ref(false)
 const readError = ref<string | null>(null)
 const saving = ref(false)
-/** Excel con contraseña, a la espera de que el usuario la escriba. */
-const locked = ref<ArrayBuffer | null>(null)
+/** Excel o PDF con contraseña, a la espera de que el usuario la escriba. */
+const locked = ref<{ buf: ArrayBuffer; kind: 'xlsx' | 'pdf' } | null>(null)
 const password = ref('')
 const passwordInput = ref<HTMLInputElement | null>(null)
 const savedCount = ref(0)
@@ -82,14 +83,11 @@ async function onFile(ev: Event) {
     const buf = await file.arrayBuffer()
     const head = new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(4, buf.byteLength)))
     if (head.startsWith('%PDF')) {
-      throw new Error('Esto es un PDF y de ahí no se pueden sacar los movimientos. En el banco busca "Exportar" o "Descargar movimientos" en Excel o CSV.')
+      await loadPdf(buf)
+      return
     }
     if (isEncryptedOffice(buf)) {
-      // Excel con contraseña: se pide y se sigue en openLocked.
-      locked.value = buf
-      reading.value = false
-      await nextTick()
-      passwordInput.value?.focus()
+      await askPassword(buf, 'xlsx')
       return
     }
     const name = file.name.toLowerCase()
@@ -104,16 +102,44 @@ async function onFile(ev: Event) {
   }
 }
 
-/** Descifra el Excel con la contraseña escrita y sigue como con uno normal. */
+/** PDF: se saca el texto con pdf.js y de ahí los movimientos. Si pide contraseña, se pregunta. */
+async function loadPdf(buf: ArrayBuffer, pwd?: string) {
+  let lines: string[]
+  try {
+    lines = await pdfToLines(buf, pwd)
+  } catch (e) {
+    const problem = passwordProblem(e)
+    if (problem === 'needed') return askPassword(buf, 'pdf')
+    if (problem === 'wrong') throw new Error('Contraseña incorrecta')
+    throw new Error('No he podido leer este PDF.')
+  }
+  const table = linesToTable(lines)
+  if (!table) throw new Error('En este PDF no encuentro movimientos (líneas con fecha e importe). Si es un extracto escaneado, no se puede leer.')
+  await loadTable(table, PDF_LAYOUT)
+}
+
+/** Archivo con contraseña: se pide y se sigue en openLocked. */
+async function askPassword(buf: ArrayBuffer, kind: 'xlsx' | 'pdf') {
+  locked.value = { buf, kind }
+  reading.value = false
+  await nextTick()
+  passwordInput.value?.focus()
+}
+
+/** Abre el archivo con la contraseña escrita y sigue como con uno normal. */
 async function openLocked() {
   if (!locked.value || !password.value || reading.value) return
   readError.value = null
   reading.value = true
+  const { buf, kind } = locked.value
   try {
-    const plain = await decryptOffice(locked.value, password.value)
+    if (kind === 'pdf') {
+      await loadPdf(buf, password.value)
+    } else {
+      await loadTable(await readXlsx(await decryptOffice(buf, password.value)))
+    }
     locked.value = null
     password.value = ''
-    await loadTable(await readXlsx(plain))
   } catch (e) {
     readError.value = (e as Error).message
   } finally {
@@ -121,8 +147,8 @@ async function openLocked() {
   }
 }
 
-async function loadTable(table: string[][]) {
-  const parsed = parseStatement(table)
+async function loadTable(table: string[][], layout?: Layout) {
+  const parsed = parseStatement(table, layout)
   if (!parsed) throw new Error('No he encontrado columnas de fecha e importe. Prueba con el CSV o el Excel que da el banco en "Exportar movimientos".')
   if (!parsed.items.length) throw new Error(parsed.incomes ? 'En este archivo solo hay ingresos; no hay cargos que apuntar.' : 'No he encontrado ningún cargo en el archivo.')
   const history = data.expenses.value
@@ -191,16 +217,16 @@ async function save() {
 
     <div class="card">
       <p class="tiny" style="margin-bottom: 0.6rem">
-        Descarga los movimientos de tu banco (CSV o Excel) y súbelos aquí. El archivo se lee en tu móvil, no se guarda en ningún sitio.
-        Solo se tienen en cuenta los cargos: los ingresos se ignoran.
+        Descarga los movimientos de tu banco (CSV, Excel o el extracto en PDF) y súbelos aquí. El archivo se lee en tu móvil, no se guarda en ningún sitio.
+        Si lleva contraseña, se te pide. Solo se tienen en cuenta los cargos: los ingresos se ignoran.
       </p>
       <label class="btn secondary small file-btn">
         <UiIcon name="file" :size="16" /> {{ rows.length ? 'Elegir otro archivo' : 'Elegir archivo' }}
-        <input type="file" accept=".csv,.txt,.tsv,.xlsx,.xls,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" @change="onFile" />
+        <input type="file" accept=".csv,.txt,.tsv,.xlsx,.xls,.pdf,text/csv,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" @change="onFile" />
       </label>
       <span v-if="fileName" class="tiny" style="margin-left: 0.5rem">{{ fileName }}</span>
       <form v-if="locked" class="locked" @submit.prevent="openLocked">
-        <p class="tiny" style="margin: 0.6rem 0 0.4rem">Este Excel tiene contraseña (muchos bancos ponen el DNI o la fecha de nacimiento). Escríbela para abrirlo; se queda en tu móvil.</p>
+        <p class="tiny" style="margin: 0.6rem 0 0.4rem">Este {{ locked.kind === 'pdf' ? 'PDF' : 'Excel' }} tiene contraseña (muchos bancos ponen el DNI o la fecha de nacimiento). Escríbela para abrirlo; se queda en tu móvil.</p>
         <div class="row">
           <input ref="passwordInput" v-model="password" type="password" class="grow" placeholder="Contraseña del archivo" autocomplete="off" :disabled="reading" />
           <button type="submit" class="small" :disabled="!password || reading">{{ reading ? 'Abriendo…' : 'Abrir' }}</button>

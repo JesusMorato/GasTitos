@@ -25,6 +25,9 @@ vi.mock('../composables/useData', () => ({
   useData: () => ({ expenses, categories, offline: ref(false), ensureLoaded: vi.fn(), importExpenses }),
 }))
 vi.mock('../composables/useEditor', () => ({ useEditor: () => ({ toast }) }))
+// pdf.js no se arranca en la prueba: se simula lo que devuelve (líneas de texto o error de contraseña).
+const { pdfToLines } = vi.hoisted(() => ({ pdfToLines: vi.fn<(buf: ArrayBuffer, pwd?: string) => Promise<string[]>>() }))
+vi.mock('../lib/pdfStatement', async (importOriginal) => ({ ...(await importOriginal<typeof import('../lib/pdfStatement')>()), pdfToLines }))
 
 import ImportView from './ImportView.vue'
 
@@ -91,10 +94,33 @@ describe('ImportView', () => {
     expect(input).toMatchObject({ is_shared: true, funding: 'personal', paid_by: 'yo', shares: [{ user_id: 'yo', amount: 8 }, { user_id: 'tu', amount: 7.99 }] })
   })
 
-  it('un PDF se rechaza con explicación', async () => {
+  it('un PDF: se leen sus líneas y el signo sale del saldo', async () => {
+    pdfToLines.mockResolvedValueOnce(['FECHA CONCEPTO IMPORTE SALDO', '01/10/2026 SALDO ANTERIOR 1.000,00', '02/10/2026 COMPRA EN MERCADONA 45,30 954,70', '03/10/2026 NOMINA 1.800,00 2.754,70'])
     const wrapper = mount(ImportView)
     await upload(wrapper, '%PDF-1.7 lo que sea')
-    expect(wrapper.text()).toContain('Esto es un PDF')
+    const items = wrapper.findAll('li.imp')
+    expect(items).toHaveLength(1)
+    expect((items[0].find('input.imp-desc').element as HTMLInputElement).value).toBe('Mercadona')
+    expect(wrapper.text()).toContain('1 cargos encontrados, 1 ingresos ignorados')
+  })
+
+  it('un PDF con contraseña la pide y luego sigue', async () => {
+    pdfToLines.mockRejectedValueOnce({ name: 'PasswordException', code: 1 })
+    pdfToLines.mockRejectedValueOnce({ name: 'PasswordException', code: 2 })
+    pdfToLines.mockResolvedValueOnce(['02/10/2026 MERCADONA 45,30 954,70', '01/10/2026 SALDO ANTERIOR 1.000,00'])
+    const wrapper = mount(ImportView)
+    await upload(wrapper, '%PDF-1.7 cifrado')
+    expect(wrapper.text()).toContain('Este PDF tiene contraseña')
+    await wrapper.find('input[type="password"]').setValue('mal')
+    await wrapper.find('form.locked').trigger('submit')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Contraseña incorrecta')
+    await wrapper.find('input[type="password"]').setValue('12345678A')
+    await wrapper.find('form.locked').trigger('submit')
+    await flushPromises()
+    expect(pdfToLines).toHaveBeenLastCalledWith(expect.anything(), '12345678A')
+    expect(wrapper.find('input[type="password"]').exists()).toBe(false)
+    expect(wrapper.findAll('li.imp')).toHaveLength(1)
   })
 
   it('un Excel con contraseña pide la contraseña', async () => {

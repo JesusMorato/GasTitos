@@ -49,6 +49,15 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
   por las 100.000 vueltas de hash. Probado contra un archivo creado por Excel 2016
   (`__fixtures__/extractoCifrado.ts`, contraseña 1234). El cifrado antiguo (Office 2007) y
   los **PDF** no se pueden: la pantalla lo dice y manda a "Exportar movimientos" en Excel/CSV.
+- **Extractos en PDF** (Bankinter solo da PDF, y con contraseña): se leen con **pdf.js**
+  (Mozilla, `pdfjs-dist`, build `legacy`, cargado solo al subir un PDF; única librería nueva
+  del proyecto). `lib/pdfStatement.ts`: `pdfToLines` agrupa el texto por alturas en líneas;
+  `linesToTable` (puro, testeado) saca de cada línea con fecha el concepto y hasta dos importes
+  (movimiento y saldo). **El signo sale del cambio de saldo** entre filas (los PDF no suelen
+  ponerlo), probando los dos órdenes (antiguo→nuevo o al revés); las líneas "Saldo anterior"
+  solo encadenan saldos. Contraseña: pdf.js la pide (`PasswordException`) y la pantalla la
+  pregunta igual que con el Excel. Escaneados: no. **Pendiente de probar con un PDF real de
+  Bankinter**: si no cuadra, pedir el archivo y añadir su formato a `pdfStatement.spec.ts`.
 - **Guía para Android** (`docs/PAGOS-ANDROID.md`): pagos automáticos leyendo la notificación
   del banco o de Google Wallet con MacroDroid (paso a paso) o Tasker (versión corta). Mismo
   `register_payment`; cada app con su `p_card` ("Bankinter aviso", "Wallet") para que no

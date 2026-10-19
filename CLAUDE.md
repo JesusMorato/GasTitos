@@ -92,8 +92,8 @@ Ajustes → "Importar un extracto" (`views/ImportView.vue`, ruta `#/importar`). 
 lee en el navegador: CSV con `lib/statement.ts` (separador adivinado, importes y fechas en
 español e inglés, cabecera detectada o columnas deducidas) y `.xlsx` con `lib/xlsx.ts`
 (lector mínimo de zip + XML, sin librerías); si el Excel lleva contraseña, `lib/officeCrypto.ts`
-lo descifra en el navegador (OLE + MS-OFFCRYPTO agile, WebCrypto). Los PDF no se importan.
-Solo se importan cargos. Tipo y categoría se
+lo descifra en el navegador (OLE + MS-OFFCRYPTO agile, WebCrypto). Los PDF se leen con pdf.js
+(`lib/pdfStatement.ts`: texto → líneas → tabla; signo por el cambio de saldo). Solo se importan cargos. Tipo y categoría se
 proponen por gastos anteriores de concepto parecido; misma fecha e importe = "parece
 apuntado". Se guarda con `useData.importExpenses` (uno a uno con `save_expense`, sin avisos
 push). Nuevos formatos de banco = nuevo caso en `statement.spec.ts`.
