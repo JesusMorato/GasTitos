@@ -8,6 +8,7 @@ import SettingsView from './views/SettingsView.vue'
 import NewPasswordView from './views/NewPasswordView.vue'
 import YearView from './views/YearView.vue'
 import SearchView from './views/SearchView.vue'
+import ImportView from './views/ImportView.vue'
 
 // Modo hash (#/pareja) para que GitHub Pages no tenga que saber de rutas.
 export const router = createRouter({
@@ -21,6 +22,7 @@ export const router = createRouter({
     { path: '/ajustes', name: 'settings', component: SettingsView },
     { path: '/ano', name: 'year', component: YearView },
     { path: '/buscar', name: 'search', component: SearchView },
+    { path: '/importar', name: 'import', component: ImportView },
     { path: '/nueva-contrasena', name: 'new-password', component: NewPasswordView, meta: { recovery: true } },
     { path: '/:pathMatch(.*)*', redirect: '/yo' },
   ],

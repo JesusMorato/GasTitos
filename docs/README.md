@@ -15,6 +15,34 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
 
 ## Estado
 
+**2026-10-19 · v0.9 — importar gastos desde un extracto del banco (CSV o Excel).**
+
+- **Dónde**: Ajustes → "Tus datos" → "Importar un extracto" (pantalla `views/ImportView.vue`,
+  ruta `#/importar`). Se elige el archivo que da el banco en "Exportar movimientos"; se lee
+  **en el propio móvil** (no se sube a ningún sitio) y se enseñan solo los **cargos** (los
+  ingresos se ignoran y se dice cuántos eran).
+- **Formatos**: CSV con `;` `,` o tabulador (se adivina), con comillas, en UTF-8 o Windows-1252;
+  y Excel `.xlsx` leído sin librerías (`lib/xlsx.ts`: el zip se descomprime con
+  `DecompressionStream` y se saca la primera hoja; las celdas con formato de fecha salen como
+  fecha). El `.xls` antiguo no se puede: se pide guardarlo como `.xlsx` o CSV.
+- **Cómo entiende el archivo** (`lib/statement.ts`, puro y con tests): busca la fila de cabecera
+  (fecha / concepto / importe, o cargo y abono por separado; en español o en inglés, p. ej.
+  Revolut); si no la hay, deduce las columnas por el contenido. Importes "1.234,56 €", "-12.50",
+  "(12,50)"; fechas 19/10/2026, 19-10-26, 2026-10-19 y números de serie de Excel. Si ningún
+  importe es negativo, se toman todos como cargos.
+- **Concepto limpio**: quita "COMPRA EN", "PAGO MOVIL EN", "RECIBO", números de tarjeta… y pasa
+  las MAYÚSCULAS a normal. Se puede editar en cada fila antes de apuntar.
+- **Propuestas**: para cada cargo, el gasto más reciente con un concepto igual o parecido fija el
+  tipo y la categoría ("Como la última vez"). Si ya hay un gasto con la **misma fecha e
+  importe**, se marca "Parece apuntado" y va sin marcar. Botones para poner el tipo a todos y
+  una categoría a los que no tienen.
+- **Guardado**: `useData.importExpenses` llama a `save_expense` una vez por gasto (el reparto
+  es el del hogar, pagado por quien importa) y recarga al final. **Sin avisos al móvil** (serían
+  muchos de golpe). Si uno falla, se para, los que sí entraron desaparecen de la lista y se
+  enseña el error. Sin conexión no se puede importar.
+- Prueba de humo de la pantalla en `views/ImportView.spec.ts` (primer test de un componente
+  con `@vue/test-utils`). Sin cambios en la base de datos.
+
 **2026-09-24 · v0.8.1 — avisos del banco sin duplicados con Apple Pay; botón de Google automático.**
 
 - **Pagos detectados**: `register_payment` junta el mismo pago que llega por dos caminos
@@ -26,6 +54,7 @@ Dirección pública: https://jesusmorato.github.io/GasTitos/
   quitar la tarjeta de "Transacción".
 - **Login con Google** ✅ funcionando: el botón sale solo si Supabase tiene Google activado
   (`/auth/v1/settings`); los errores de vuelta de Google se muestran traducidos.
+
 
 **2026-09-21 · v0.8 — avisos en el móvil cuando la pareja apunta un gasto que te toca. ✅ funcionando en los dos iPhone.**
 

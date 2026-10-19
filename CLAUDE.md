@@ -86,6 +86,16 @@ archivo, `npm test` lo comprueba. La lógica de permisos del navegador está en
 Publicar la función es un workflow aparte (`.github/workflows/funciones.yml`). La puesta
 en marcha manual (claves y secretos) está en `docs/AVISOS.md`.
 
+## Importar extractos del banco
+
+Ajustes → "Importar un extracto" (`views/ImportView.vue`, ruta `#/importar`). El archivo se
+lee en el navegador: CSV con `lib/statement.ts` (separador adivinado, importes y fechas en
+español e inglés, cabecera detectada o columnas deducidas) y `.xlsx` con `lib/xlsx.ts`
+(lector mínimo de zip + XML, sin librerías). Solo se importan cargos. Tipo y categoría se
+proponen por gastos anteriores de concepto parecido; misma fecha e importe = "parece
+apuntado". Se guarda con `useData.importExpenses` (uno a uno con `save_expense`, sin avisos
+push). Nuevos formatos de banco = nuevo caso en `statement.spec.ts`.
+
 ## Documentación
 
 - `docs/README.md` — estado del proyecto y decisiones tomadas.

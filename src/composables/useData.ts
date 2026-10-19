@@ -339,6 +339,27 @@ export function useData() {
     return id
   }
 
+  /**
+   * Apunta varios gastos seguidos (importar un extracto). Uno a uno, con la misma
+   * save_expense de siempre; sin avisos al móvil (serían muchos de golpe). Tras cada
+   * uno llama a onProgress con los que ya están guardados; si uno falla, se para,
+   * recarga lo que sí entró y lanza el error.
+   */
+  async function importExpenses(inputs: ExpenseInput[], onProgress?: (done: number) => void): Promise<number> {
+    let done = 0
+    try {
+      for (const input of inputs) {
+        const { error: e } = await supabase.rpc('save_expense', { p: input })
+        fail(e)
+        done++
+        onProgress?.(done)
+      }
+    } finally {
+      if (done > 0) await loadAll()
+    }
+    return done
+  }
+
   /** Resultado de probar el envío de avisos a mis propios aparatos. */
   async function testPushDelivery(): Promise<{
     estado?: string
@@ -603,7 +624,7 @@ export function useData() {
     savedByGoal, sharesByExpense, categoryById, expensesWithShares, potBudget, myBudget, setBudget,
     pendingRuns, lastAmountOf, addRecurring, updateRecurring, deleteRecurring, resolvePending, skipPending,
     loadAll, ensureLoaded, refreshIfStale, refreshPayments, reset,
-    saveExpense, setExpensePublic, deleteExpense, reinsertExpense,
+    saveExpense, importExpenses, setExpensePublic, deleteExpense, reinsertExpense,
     loadPushSubscriptions, savePushSubscription, removePushSubscription, notifyPartner, testPushDelivery,
     addCategory, updateCategory, reorderCategories, deleteCategory, moveCategory,
     addSettlement, deleteSettlement,

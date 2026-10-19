@@ -553,6 +553,8 @@ function exportGoals() {
         <button type="button" class="secondary small" @click="exportExpenses"><UiIcon name="arrowIn" :size="16" /> Gastos y pagos</button>
         <button type="button" class="secondary small" @click="exportGoals"><UiIcon name="arrowIn" :size="16" /> Huchas y movimientos</button>
       </div>
+      <p class="tiny" style="margin: 0.9rem 0 0.4rem">¿Tienes gastos sin apuntar? Sube el extracto del banco (CSV o Excel) y elige cuáles apuntar.</p>
+      <button type="button" class="secondary small" @click="router.push({ name: 'import' })"><UiIcon name="file" :size="16" /> Importar un extracto</button>
     </div>
 
     <div class="card flat">
